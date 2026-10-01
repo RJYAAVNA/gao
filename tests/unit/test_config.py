@@ -108,3 +108,11 @@ def test_defaults_are_safe() -> None:
     assert Settings.model_fields["session_cookie_secure"].default is True
     assert Settings.model_fields["business_timezone"].default == "Asia/Shanghai"
     assert Settings.model_fields["scheduler_enabled"].default is True
+
+
+def test_registration_closed_by_default() -> None:
+    """注册默认关闭。
+
+    第一版由管理员建号；实例若意外暴露到公网也不应接受陌生人注册。
+    """
+    assert Settings.model_fields["registration_open"].default is False

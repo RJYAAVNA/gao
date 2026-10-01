@@ -43,8 +43,10 @@ class Settings(BaseSettings):
     scheduler_enabled: bool = True
 
     # ---------------------------------------------------------------- 安全
-    # demo 阶段允许关闭注册，只由管理员建号。
-    registration_open: bool = True
+    # 默认关闭注册：第一版由管理员用 ledger.cli create-admin 建号试用，
+    # 邮箱验证通道待域名备案后再定。默认关闭也更安全——
+    # 实例若意外暴露到公网，不应该直接接受陌生人注册。
+    registration_open: bool = False
     # 会话 Cookie 是否要求 HTTPS。生产必须为 True。
     session_cookie_secure: bool = True
     # 单 IP 限流配置，供 flask-limiter 使用。

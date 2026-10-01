@@ -3,7 +3,10 @@
 管理银行理财持仓与交易，自动采集产品净值，按日/周/月/自定义区间跟踪收益，
 并能说明每个数字用的是哪天的净值、来自哪个来源、数据是否完整。
 
-当前进度：**S1（项目骨架与数据底座）**。详见 [docs/progress.md](docs/progress.md)。
+当前进度：**S1（项目骨架与数据底座）已完成**。
+阶段规划见 [docs/roadmap.md](docs/roadmap.md)，实际交付记录见 [docs/progress.md](docs/progress.md)。
+
+本版本不开放注册，由管理员用 CLI 建号试用功能。
 
 ## 技术栈
 
