@@ -1,0 +1,89 @@
+"""Flask 应用工厂。
+
+只注册配置、扩展和蓝图。不建表、不导入种子、不启动调度。
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from flask import Flask, jsonify
+from flask_wtf.csrf import CSRFProtect
+from sqlalchemy import text
+
+from ledger.config import Settings, get_settings
+from ledger.db.session import get_engine
+from ledger.logging_setup import configure_logging
+
+csrf = CSRFProtect()
+
+
+def create_app(settings: Settings | None = None) -> Flask:
+    """构建 Flask 应用。
+
+    settings 显式传入便于测试；生产走环境变量，缺密钥时直接启动失败。
+    """
+    cfg = settings or get_settings()
+    configure_logging(cfg.log_level, cfg.app_env)
+
+    app = Flask(__name__, template_folder="templates", static_folder="static")
+
+    app.config.update(
+        SECRET_KEY=cfg.session_secret,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=cfg.session_cookie_secure,
+        # 会话有效期，按需调整
+        PERMANENT_SESSION_LIFETIME=60 * 60 * 24 * 7,
+        # 上传限制：账单文件不应很大，防止资源耗尽
+        MAX_CONTENT_LENGTH=8 * 1024 * 1024,
+        JSON_SORT_KEYS=False,
+        LEDGER_SETTINGS=cfg,
+    )
+
+    csrf.init_app(app)
+    _register_health_routes(app)
+    _register_error_handlers(app)
+
+    return app
+
+
+def _register_health_routes(app: Flask) -> None:
+    """健康检查。
+
+    /health/live 只判断进程活性；/health/ready 检查数据库与 schema。
+    外部银行不可用不应让 Web 失去就绪状态。
+    """
+
+    @app.get("/health/live")
+    def health_live() -> Any:
+        return jsonify(status="ok")
+
+    @app.get("/health/ready")
+    def health_ready() -> Any:
+        try:
+            with get_engine().connect() as conn:
+                conn.execute(text("SELECT 1"))
+        except Exception as exc:
+            return jsonify(status="unavailable", reason=type(exc).__name__), 503
+        return jsonify(status="ok")
+
+
+def _register_error_handlers(app: Flask) -> None:
+    """统一错误响应。不向客户端泄露内部细节。"""
+
+    @app.errorhandler(404)
+    def not_found(_e: Any) -> Any:
+        return jsonify(error="not_found"), 404
+
+    @app.errorhandler(403)
+    def forbidden(_e: Any) -> Any:
+        return jsonify(error="forbidden"), 403
+
+    @app.errorhandler(429)
+    def rate_limited(_e: Any) -> Any:
+        return jsonify(error="rate_limited"), 429
+
+    @app.errorhandler(500)
+    def server_error(_e: Any) -> Any:
+        return jsonify(error="internal_error"), 500

@@ -1,0 +1,43 @@
+# ---- 敏感数据：绝不入库 ----
+# legacy/ 含真实持仓、默认凭据、个人台账，仅本地保留作参考
+legacy/
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+secrets/
+artifacts/
+*.pem
+*.key
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+coverage.xml
+
+# ---- 构建与运行产物 ----
+dist/
+build/
+*.log
+logs/
+
+# ---- 编辑器与系统 ----
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---- 本地数据卷 ----
+pgdata/
+data/

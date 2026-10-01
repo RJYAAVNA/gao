@@ -1,0 +1,100 @@
+[project]
+name = "wealth-ledger"
+version = "0.1.0"
+description = "多银行理财台账：净值采集、持仓记账与收益跟踪"
+requires-python = ">=3.12"
+
+dependencies = [
+    # Web 框架与服务
+    "flask==3.1.0",
+    "gunicorn==23.0.0",
+    "flask-wtf==1.2.2",              # CSRF 保护
+    "flask-limiter==3.9.2",          # 登录/注册接口限流
+
+    # 数据库与迁移
+    "sqlalchemy==2.0.36",
+    "alembic==1.14.0",
+    "psycopg[binary,pool]==3.2.3",
+
+    # 配置与校验
+    "pydantic==2.10.4",
+    "pydantic-settings==2.7.0",
+    "email-validator==2.2.0",
+
+    # 安全
+    "argon2-cffi==23.1.0",
+
+    # 采集
+    "httpx==0.28.1",
+    "tenacity==9.0.0",
+    "lxml==5.3.0",
+    "beautifulsoup4==4.12.3",
+
+    # 调度
+    "apscheduler==3.11.0",
+
+    # 日志
+    "structlog==24.4.0",
+
+    # Excel 导入
+    "openpyxl==3.1.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "respx==0.22.0",                 # 采集器契约测试：拦截 httpx
+    "ruff==0.8.4",
+    "mypy==1.14.0",
+    "types-beautifulsoup4==4.12.0.20241020",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------------------------------------------------------- 工具配置
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = [
+    # 允许中文全角标点出现在注释与文档字符串
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # PgUUID 是 SQLAlchemy 社区惯用的别名写法
+    "N811",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+plugins = []
+
+[[tool.mypy.overrides]]
+# 这些库未提供类型标注（flask_wtf 无 py.typed）
+module = ["apscheduler.*", "bs4.*", "flask_wtf.*", "flask_limiter.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q --strict-markers"
+markers = [
+    "integration: 需要 PostgreSQL 的集成测试",
+    "contract: 采集器契约测试，使用冻结样本",
+]
+
+[tool.coverage.run]
+source = ["src/ledger"]
+branch = true

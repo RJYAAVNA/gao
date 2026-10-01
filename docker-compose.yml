@@ -1,0 +1,107 @@
+# 本地与 demo 部署编排。
+#
+# 与旧版的关键差别：
+#   - build 指向 deploy/Dockerfile（旧版文件名是 .txt，构建必然失败）
+#   - 迁移是独立的一次性服务，成功后 web/worker/scheduler 才启动
+#   - 数据库不暴露到宿主机端口，只在内部网络可达
+#   - 不提供任何默认密码：缺少 .env 则启动失败
+#   - web / scheduler / worker 共用同一镜像，不同 command
+
+name: wealth-ledger
+
+x-app-image: &app-image
+  build:
+    context: .
+    dockerfile: deploy/Dockerfile
+  image: wealth-ledger:${IMAGE_TAG:-dev}
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql://${POSTGRES_USER:?必须在 .env 设置}:${POSTGRES_PASSWORD:?必须在 .env 设置}@postgres:5432/${POSTGRES_DB:?必须在 .env 设置}
+  SESSION_SECRET: ${SESSION_SECRET:?必须在 .env 设置随机密钥}
+  APP_ENV: ${APP_ENV:-dev}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  BUSINESS_TIMEZONE: Asia/Shanghai
+  ARTIFACT_STORAGE_PATH: /var/lib/ledger/artifacts
+  REGISTRATION_OPEN: ${REGISTRATION_OPEN:-true}
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?必须在 .env 设置}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?必须在 .env 设置}
+      POSTGRES_DB: ${POSTGRES_DB:?必须在 .env 设置}
+      # 中文排序与 Decimal 行为依赖 locale，固定下来避免环境差异
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # 不映射端口：数据库只在 compose 内部网络可达
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # 发布阶段的一次性迁移任务。成功退出后其他服务才启动。
+  migrate:
+    <<: *app-image
+    environment: *app-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    <<: *app-image
+    environment: *app-env
+    ports:
+      - "${WEB_PORT:-8000}:8000"
+    volumes:
+      - artifacts:/var/lib/ledger/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health/live || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  scheduler:
+    <<: *app-image
+    environment:
+      <<: *app-env
+      SCHEDULER_ENABLED: "true"
+    command: ["python", "-m", "ledger.jobs.scheduler"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # 单实例：任务去重虽有唯一键保护，但没必要跑多份
+    deploy:
+      replicas: 1
+    restart: unless-stopped
+
+  worker:
+    <<: *app-image
+    environment:
+      <<: *app-env
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+    command: ["python", "-m", "ledger.jobs.worker"]
+    volumes:
+      - artifacts:/var/lib/ledger/artifacts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # SIGTERM 后 worker 停止领取新任务并等待当前任务
+    stop_grace_period: 40s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  artifacts:
