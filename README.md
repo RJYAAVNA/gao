@@ -203,3 +203,44 @@ uv run python scripts/seed_test_data.py
 - `POST /api/catalog/institutions` - 创建机构（仅管理员）
 - `GET /api/catalog/products` - 列出产品
 - `POST /api/catalog/products` - 创建产品（仅管理员）
+
+### S3：数据源与净值采集
+
+**目标**：配置数据源，建立产品与数据源的映射，实现净值自动采集。
+
+**功能**：
+
+1. **数据源管理**：
+   - 注册采集器（中银理财、银行理财）
+   - 配置源启用状态和采集参数
+   - 查看原始证据与采集日志
+
+2. **产品映射**：
+   - 建立产品与数据源的关联
+   - 支持一个产品对应多个数据源
+
+3. **任务系统**：
+   - 定时生成净值同步任务
+   - Worker 进程异步执行采集
+   - 自动去重与幂等处理
+
+**API 端点**：
+
+- `GET /api/catalog/sources` - 列出数据源
+- `POST /api/catalog/sources` - 创建数据源（仅管理员）
+- `PATCH /api/catalog/sources/:id` - 更新数据源（仅管理员）
+- `GET /api/catalog/products/:id/sources` - 列出产品的数据源映射
+- `POST /api/catalog/products/:id/sources` - 创建产品与源的映射（仅管理员）
+- `DELETE /api/catalog/products/:id/sources/:source_id` - 删除映射（仅管理员）
+- `GET /api/jobs` - 列出任务（仅管理员）
+- `POST /api/jobs/trigger-nav-sync` - 手动触发净值同步（仅管理员）
+
+**后台进程**：
+
+```bash
+# 启动 worker 进程
+uv run python -m ledger.jobs.worker
+
+# 启动 scheduler（定时生成任务）
+uv run python -m ledger.jobs.scheduler
+```

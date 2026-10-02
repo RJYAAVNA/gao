@@ -92,10 +92,11 @@ def _register_error_handlers(app: Flask) -> None:
 
 def _register_blueprints(app: Flask) -> None:
     """注册 API 蓝图。"""
-    from ledger.api import accounts, auth, catalog, positions, transactions
+    from ledger.api import accounts, auth, catalog, jobs, positions, transactions
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(accounts.bp)
     app.register_blueprint(transactions.bp)
     app.register_blueprint(positions.bp)
     app.register_blueprint(catalog.bp)
+    app.register_blueprint(jobs.bp)
