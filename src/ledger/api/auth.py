@@ -6,6 +6,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from functools import wraps
+from typing import Any, TypeVar, cast
+
 from flask import Blueprint, jsonify, request
 from flask.typing import ResponseReturnValue
 from flask_limiter import Limiter
@@ -28,6 +32,41 @@ bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 # 限流器，防止暴力破解
 limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def login_required(f: F) -> F:
+    """装饰器：要求用户已登录。"""
+
+    @wraps(f)
+    def decorated_function(*args: Any, **kwargs: Any) -> ResponseReturnValue:
+        if get_current_user_id() is None:
+            return jsonify(error="unauthorized"), 401
+        result: ResponseReturnValue = f(*args, **kwargs)
+        return result
+
+    return cast(F, decorated_function)
+
+
+def admin_required(f: F) -> F:
+    """装饰器:要求用户是管理员。"""
+
+    @wraps(f)
+    def decorated_function(*args: Any, **kwargs: Any) -> ResponseReturnValue:
+        user_id = get_current_user_id()
+        if user_id is None:
+            return jsonify(error="unauthorized"), 401
+
+        with get_session() as db:
+            user = load_current_user(db)
+            if user is None or not user.is_admin:
+                return jsonify(error="forbidden"), 403
+
+        result: ResponseReturnValue = f(*args, **kwargs)
+        return result
+
+    return cast(F, decorated_function)
 
 
 @bp.post("/login")

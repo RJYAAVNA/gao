@@ -82,4 +82,13 @@ def get_session() -> Session:
     return get_session_factory()()
 
 
-__all__ = ["get_engine", "get_session", "get_session_factory", "reset_engine", "session_scope"]
+__all__ = [
+    "get_engine",
+    "get_session",
+    "get_session_factory",
+    "reset_engine",
+    "session_scope",
+]
+
+# 为了保持向后兼容，提供 get_session_context 别名
+get_session_context = session_scope
