@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import sys
 
+from ledger.config import get_settings
 from ledger.jobs.scheduler import Scheduler
 from ledger.jobs.worker import Worker
 
@@ -14,13 +15,26 @@ def main() -> int:
     if len(sys.argv) < 2:
         print("用法: python -m ledger.cli <command>")
         print("可用命令:")
+        print("  check-config      验证配置是否正确")
         print("  schedule-daily    生成每日同步任务")
         print("  worker            启动 Worker 进程")
         return 1
 
     command = sys.argv[1]
 
-    if command == "schedule-daily":
+    if command == "check-config":
+        try:
+            settings = get_settings()
+            print("[OK] Configuration validated")
+            print(f"  Environment: {settings.app_env}")
+            print(f"  Database URL: {settings.database_url}")
+            print(f"  Session cookie secure: {settings.session_cookie_secure}")
+            return 0
+        except Exception as e:
+            print(f"[ERROR] Configuration validation failed: {e}", file=sys.stderr)
+            return 1
+
+    elif command == "schedule-daily":
         scheduler = Scheduler()
         scheduler.schedule_daily_sync()
         return 0
