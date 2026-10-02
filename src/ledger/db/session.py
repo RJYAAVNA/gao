@@ -74,4 +74,12 @@ def reset_engine() -> None:
     _session_factory = None
 
 
-__all__ = ["get_engine", "get_session_factory", "reset_engine", "session_scope"]
+def get_session() -> Session:
+    """获取当前数据库会话（用于 Flask 路由）。
+
+    注意：调用者负责关闭会话。通常在请求结束时自动关闭。
+    """
+    return get_session_factory()()
+
+
+__all__ = ["get_engine", "get_session", "get_session_factory", "reset_engine", "session_scope"]

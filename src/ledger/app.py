@@ -44,6 +44,7 @@ def create_app(settings: Settings | None = None) -> Flask:
     csrf.init_app(app)
     _register_health_routes(app)
     _register_error_handlers(app)
+    _register_blueprints(app)
 
     return app
 
@@ -87,3 +88,14 @@ def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(500)
     def server_error(_e: Any) -> Any:
         return jsonify(error="internal_error"), 500
+
+
+def _register_blueprints(app: Flask) -> None:
+    """注册 API 蓝图。"""
+    from ledger.api import accounts, auth, catalog, positions, transactions
+
+    app.register_blueprint(auth.bp)
+    app.register_blueprint(accounts.bp)
+    app.register_blueprint(transactions.bp)
+    app.register_blueprint(positions.bp)
+    app.register_blueprint(catalog.bp)

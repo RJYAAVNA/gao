@@ -38,3 +38,13 @@ def app(settings: Settings) -> Iterator[Flask]:
 @pytest.fixture
 def client(app: Flask) -> FlaskClient:
     return app.test_client()
+
+
+@pytest.fixture
+def db_session(app: Flask) -> Iterator[Session]:
+    """提供一个干净的数据库会话，测试结束后回滚所有更改。"""
+    from ledger.db.session import get_session
+
+    with get_session() as session:
+        yield session
+        session.rollback()
