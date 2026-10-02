@@ -6,8 +6,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from flask import abort, g, session
 
@@ -59,7 +60,7 @@ def load_current_user(db: Session) -> User | None:
         用户对象，未登录时返回 None
     """
     if hasattr(g, "_current_user"):
-        return g._current_user
+        return g._current_user  # type: ignore[no-any-return]
 
     user_id = get_current_user_id()
     if user_id is None:

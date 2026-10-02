@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -31,7 +32,7 @@ limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 @bp.post("/login")
 @limiter.limit(lambda: get_settings().rate_limit_login)
-def login():
+def login() -> ResponseReturnValue:
     """用户登录。
 
     Request:
@@ -82,7 +83,7 @@ def login():
 
 
 @bp.post("/logout")
-def logout():
+def logout() -> ResponseReturnValue:
     """用户登出。
 
     Response:
@@ -93,7 +94,7 @@ def logout():
 
 
 @bp.get("/me")
-def get_current_user():
+def get_current_user() -> ResponseReturnValue:
     """获取当前登录用户信息。
 
     Response:

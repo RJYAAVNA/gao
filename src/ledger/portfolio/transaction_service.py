@@ -75,7 +75,9 @@ def list_transactions(
     if end_date is not None:
         stmt = stmt.where(Transaction.effective_date <= end_date)
 
-    stmt = stmt.order_by(Transaction.effective_date.desc(), Transaction.created_at.desc()).limit(limit)
+    stmt = stmt.order_by(Transaction.effective_date.desc(), Transaction.created_at.desc()).limit(
+        limit
+    )
     return list(db.scalars(stmt))
 
 
@@ -161,7 +163,7 @@ def create_transaction(
         db.flush()
     except IntegrityError as e:
         if "uq_transactions_user_idem" in str(e):
-            raise DuplicateTransactionError(f"幂等键 '{idempotency_key}' 已存在")
+            raise DuplicateTransactionError(f"幂等键 '{idempotency_key}' 已存在") from None
         raise
 
     # 更新持仓投影
@@ -209,7 +211,11 @@ def _update_position(
     pos.ledger_version += 1
 
     # 成本与收益核算
-    if txn.type in (TransactionType.BUY, TransactionType.OPENING_BALANCE, TransactionType.REINVEST_DIVIDEND):
+    if txn.type in (
+        TransactionType.BUY,
+        TransactionType.OPENING_BALANCE,
+        TransactionType.REINVEST_DIVIDEND,
+    ):
         # 买入/期初/再投：成本累加
         pos.remaining_cost += txn.cash_amount + txn.fee
     elif txn.type == TransactionType.REDEEM:
@@ -257,7 +263,7 @@ def rebuild_positions_for_account(
     db.flush()
 
     # 按时间顺序重放交易
-    stmt = (
+    txn_stmt = (
         select(Transaction)
         .where(
             Transaction.user_id == user_id,
@@ -265,7 +271,7 @@ def rebuild_positions_for_account(
         )
         .order_by(Transaction.effective_date, Transaction.created_at)
     )
-    transactions = db.scalars(stmt).all()
+    transactions = db.scalars(txn_stmt).all()
 
     for txn in transactions:
         _update_position(db, user_id, account_id, txn.product_id, txn)

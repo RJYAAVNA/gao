@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import date
 from decimal import Decimal
 
@@ -11,8 +10,8 @@ from sqlalchemy.orm import Session
 
 from ledger.auth import create_user
 from ledger.catalog.service import create_institution, create_product
-from ledger.db.models.identity import UserRole
 from ledger.db.models.catalog import InstitutionType, ValuationMethod
+from ledger.db.models.identity import UserRole
 from ledger.db.models.portfolio import TransactionType
 from ledger.portfolio.account_service import create_account
 from ledger.portfolio.position_service import get_position, list_positions
@@ -69,7 +68,9 @@ def test_create_transaction_buy(db_session: Session, test_setup: dict):
     assert txn.fee == Decimal("5")
 
     # 检查持仓
-    pos = get_position(db_session, test_setup["user_id"], test_setup["account_id"], test_setup["product_id"])
+    pos = get_position(
+        db_session, test_setup["user_id"], test_setup["account_id"], test_setup["product_id"]
+    )
     assert pos.shares == Decimal("1000")
     assert pos.remaining_cost == Decimal("10005")  # 10000 + 5
     assert pos.realized_pnl == Decimal("0")
@@ -105,7 +106,9 @@ def test_create_transaction_redeem(db_session: Session, test_setup: dict):
     db_session.commit()
 
     # 检查持仓
-    pos = get_position(db_session, test_setup["user_id"], test_setup["account_id"], test_setup["product_id"])
+    pos = get_position(
+        db_session, test_setup["user_id"], test_setup["account_id"], test_setup["product_id"]
+    )
     assert pos.shares == Decimal("500")  # 1000 - 500
     # 单位成本 = 10000 / 1000 = 10
     # 赎回成本 = 500 * 10 = 5000

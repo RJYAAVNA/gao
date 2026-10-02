@@ -46,7 +46,9 @@ def list_accounts(db: Session, user_id: uuid.UUID) -> list[BankAccount]:
     Returns:
         账户列表
     """
-    stmt = select(BankAccount).where(BankAccount.user_id == user_id).order_by(BankAccount.created_at)
+    stmt = (
+        select(BankAccount).where(BankAccount.user_id == user_id).order_by(BankAccount.created_at)
+    )
     return list(db.scalars(stmt))
 
 
@@ -110,7 +112,7 @@ def create_account(
         db.flush()
     except IntegrityError as e:
         if "uq_bank_accounts_user_alias" in str(e):
-            raise DuplicateAccountAliasError(f"账户别名 '{alias}' 已存在")
+            raise DuplicateAccountAliasError(f"账户别名 '{alias}' 已存在") from None
         raise
     return account
 
@@ -149,7 +151,7 @@ def update_account(
         db.flush()
     except IntegrityError as e:
         if "uq_bank_accounts_user_alias" in str(e):
-            raise DuplicateAccountAliasError(f"账户别名 '{alias}' 已存在")
+            raise DuplicateAccountAliasError(f"账户别名 '{alias}' 已存在") from None
         raise
     return account
 

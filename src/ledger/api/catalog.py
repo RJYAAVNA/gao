@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 
 from ledger.auth import require_admin, require_login
 from ledger.catalog.service import (
@@ -34,7 +35,7 @@ bp = Blueprint("catalog", __name__, url_prefix="/api/catalog")
 
 @bp.get("/institutions")
 @require_login
-def get_institutions():
+def get_institutions() -> ResponseReturnValue:
     """列出所有机构。
 
     Query params:
@@ -74,7 +75,7 @@ def get_institutions():
 
 @bp.get("/institutions/<uuid:institution_id>")
 @require_login
-def get_institution_detail(institution_id: uuid.UUID):
+def get_institution_detail(institution_id: uuid.UUID) -> ResponseReturnValue:
     """获取单个机构详情。
 
     Response:
@@ -98,7 +99,7 @@ def get_institution_detail(institution_id: uuid.UUID):
 
 @bp.post("/institutions")
 @require_admin
-def create_institution_route():
+def create_institution_route() -> ResponseReturnValue:
     """创建机构（仅管理员）。
 
     Request:
@@ -153,7 +154,7 @@ def create_institution_route():
 
 @bp.get("/products")
 @require_login
-def get_products():
+def get_products() -> ResponseReturnValue:
     """列出产品。
 
     Query params:
@@ -219,7 +220,7 @@ def get_products():
 
 @bp.get("/products/<uuid:product_id>")
 @require_login
-def get_product_detail(product_id: uuid.UUID):
+def get_product_detail(product_id: uuid.UUID) -> ResponseReturnValue:
     """获取单个产品详情。
 
     Response:
@@ -248,7 +249,7 @@ def get_product_detail(product_id: uuid.UUID):
 
 @bp.post("/products")
 @require_admin
-def create_product_route():
+def create_product_route() -> ResponseReturnValue:
     """创建产品（仅管理员）。
 
     Request:

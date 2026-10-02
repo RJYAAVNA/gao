@@ -17,6 +17,7 @@ os.environ.setdefault("SESSION_COOKIE_SECURE", "false")
 
 from flask import Flask
 from flask.testing import FlaskClient
+from sqlalchemy.orm import Session
 
 from ledger.app import create_app
 from ledger.config import Settings, get_settings

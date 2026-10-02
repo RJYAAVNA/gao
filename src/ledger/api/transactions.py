@@ -10,6 +10,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 
 from ledger.auth import get_current_user_id, require_login
 from ledger.db.models.portfolio import TransactionType
@@ -27,7 +28,7 @@ bp = Blueprint("transactions", __name__, url_prefix="/api/transactions")
 
 @bp.get("")
 @require_login
-def list_user_transactions():
+def list_user_transactions() -> ResponseReturnValue:
     """列出当前用户的交易流水。
 
     Query params:
@@ -103,7 +104,7 @@ def list_user_transactions():
 
 @bp.get("/<uuid:transaction_id>")
 @require_login
-def get_user_transaction(transaction_id: uuid.UUID):
+def get_user_transaction(transaction_id: uuid.UUID) -> ResponseReturnValue:
     """获取单条交易详情。
 
     Response:
@@ -139,7 +140,7 @@ def get_user_transaction(transaction_id: uuid.UUID):
 
 @bp.post("")
 @require_login
-def create_user_transaction():
+def create_user_transaction() -> ResponseReturnValue:
     """创建交易流水。
 
     Request:

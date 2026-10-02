@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 
 from ledger.auth import get_current_user_id, require_login
 from ledger.db.session import get_session
@@ -26,7 +27,7 @@ bp = Blueprint("accounts", __name__, url_prefix="/api/accounts")
 
 @bp.get("")
 @require_login
-def list_user_accounts():
+def list_user_accounts() -> ResponseReturnValue:
     """列出当前用户的所有银行账户。
 
     Response:
@@ -64,7 +65,7 @@ def list_user_accounts():
 
 @bp.get("/<uuid:account_id>")
 @require_login
-def get_user_account(account_id: uuid.UUID):
+def get_user_account(account_id: uuid.UUID) -> ResponseReturnValue:
     """获取单个账户详情。
 
     Response:
@@ -93,7 +94,7 @@ def get_user_account(account_id: uuid.UUID):
 
 @bp.post("")
 @require_login
-def create_user_account():
+def create_user_account() -> ResponseReturnValue:
     """创建银行账户。
 
     Request:
@@ -153,7 +154,7 @@ def create_user_account():
 
 @bp.patch("/<uuid:account_id>")
 @require_login
-def update_user_account(account_id: uuid.UUID):
+def update_user_account(account_id: uuid.UUID) -> ResponseReturnValue:
     """更新账户信息。
 
     Request:
@@ -201,7 +202,7 @@ def update_user_account(account_id: uuid.UUID):
 
 @bp.delete("/<uuid:account_id>")
 @require_login
-def delete_user_account(account_id: uuid.UUID):
+def delete_user_account(account_id: uuid.UUID) -> ResponseReturnValue:
     """删除账户。
 
     级联删除该账户下的所有交易和持仓。

@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 
 from flask import Blueprint, jsonify, request
+from flask.typing import ResponseReturnValue
 
 from ledger.auth import get_current_user_id, require_login
 from ledger.db.session import get_session
@@ -22,7 +23,7 @@ bp = Blueprint("positions", __name__, url_prefix="/api/positions")
 
 @bp.get("")
 @require_login
-def list_user_positions():
+def list_user_positions() -> ResponseReturnValue:
     """列出当前用户的持仓。
 
     Query params:
@@ -85,7 +86,7 @@ def list_user_positions():
 
 @bp.get("/<uuid:account_id>/<uuid:product_id>")
 @require_login
-def get_user_position(account_id: uuid.UUID, product_id: uuid.UUID):
+def get_user_position(account_id: uuid.UUID, product_id: uuid.UUID) -> ResponseReturnValue:
     """获取单个持仓详情。
 
     Response:

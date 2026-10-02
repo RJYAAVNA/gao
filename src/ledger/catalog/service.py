@@ -121,7 +121,9 @@ def create_institution(
         db.flush()
     except IntegrityError as e:
         if "uq_institutions_name_type" in str(e):
-            raise DuplicateInstitutionError(f"机构 '{name}' ({institution_type.value}) 已存在")
+            raise DuplicateInstitutionError(
+                f"机构 '{name}' ({institution_type.value}) 已存在"
+            ) from None
         raise
     return inst
 
@@ -221,7 +223,7 @@ def create_product(
         if "uq_products_issuer_code" in str(e):
             raise DuplicateProductError(
                 f"产品 '{issuer_code}' (份额类别: {share_class}) 已存在于该发行机构"
-            )
+            ) from None
         raise
     return prod
 

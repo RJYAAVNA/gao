@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 
 from ledger.auth import create_user
 from ledger.catalog.service import create_institution
-from ledger.db.models.identity import UserRole
 from ledger.db.models.catalog import InstitutionType
+from ledger.db.models.identity import UserRole
 from ledger.portfolio.account_service import (
     AccountNotFoundError,
     DuplicateAccountAliasError,
@@ -103,7 +103,9 @@ def test_update_account(db_session: Session, test_user: uuid.UUID, test_bank: uu
     account = create_account(db_session, test_user, test_bank, "旧名称", "****1111")
     db_session.commit()
 
-    updated = update_account(db_session, test_user, account.id, alias="新名称", masked_account="****9999")
+    updated = update_account(
+        db_session, test_user, account.id, alias="新名称", masked_account="****9999"
+    )
     db_session.commit()
 
     assert updated.alias == "新名称"
