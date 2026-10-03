@@ -330,9 +330,7 @@ def execute_valuation_run(
                         and prev_snapshot.cumulative_pnl is not None
                         and portfolio_val.cumulative_pnl is not None
                     ):
-                        period_pnl = (
-                            portfolio_val.cumulative_pnl - prev_snapshot.cumulative_pnl
-                        )
+                        period_pnl = portfolio_val.cumulative_pnl - prev_snapshot.cumulative_pnl
 
                 # 保存组合快照
                 portfolio_snapshot = PortfolioSnapshot(

@@ -59,9 +59,7 @@ def index() -> str:
         },
     ]
 
-    return render_template(
-        "pages/index.html", summary=summary, top_positions=top_positions
-    )
+    return render_template("pages/index.html", summary=summary, top_positions=top_positions)
 
 
 @bp.route("/positions")
@@ -129,9 +127,7 @@ def analytics() -> str:
     # 生成模拟的净值走势数据（最近30天）
     today = date.today()
     nav_dates = [(today - timedelta(days=i)).strftime("%m-%d") for i in range(29, -1, -1)]
-    nav_values = [
-        145000 + i * 150 + (i % 3) * 200 for i in range(30)
-    ]  # 模拟上涨趋势
+    nav_values = [145000 + i * 150 + (i % 3) * 200 for i in range(30)]  # 模拟上涨趋势
 
     nav_data = {"dates": nav_dates, "values": nav_values}
 

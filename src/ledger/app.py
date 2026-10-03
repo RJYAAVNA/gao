@@ -127,10 +127,10 @@ def _register_error_handlers(app: Flask) -> None:
         return jsonify(error="internal_error"), 500
 
 
-
 if __name__ == "__main__":
     app = create_app()
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 def _register_blueprints(app: Flask) -> None:
     """注册 API 蓝图。"""
@@ -142,4 +142,3 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(positions.bp)
     app.register_blueprint(catalog.bp)
     app.register_blueprint(jobs.bp)
-

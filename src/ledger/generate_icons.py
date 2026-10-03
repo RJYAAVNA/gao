@@ -21,7 +21,7 @@ def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:
     """
     # 创建图像（深色背景）
     bg_color = (15, 23, 42)  # --color-background
-    img = Image.new('RGB', (size, size), bg_color)
+    img = Image.new("RGB", (size, size), bg_color)
     draw = ImageDraw.Draw(img)
 
     # 如果是 maskable 图标，添加安全区域（20%）
@@ -41,7 +41,7 @@ def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:
     draw.rounded_rectangle(
         [offset, offset, offset + inner_size, offset + inner_size],
         radius=corner_radius,
-        fill=accent_color
+        fill=accent_color,
     )
 
     # 绘制图标内容（简化的货币符号）
@@ -58,25 +58,13 @@ def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:
     x_right = offset + inner_size * 0.7
 
     # 左斜线
-    draw.line(
-        [(x_left, y_top), (x_center, y_middle)],
-        fill=symbol_color,
-        width=line_width
-    )
+    draw.line([(x_left, y_top), (x_center, y_middle)], fill=symbol_color, width=line_width)
 
     # 右斜线
-    draw.line(
-        [(x_right, y_top), (x_center, y_middle)],
-        fill=symbol_color,
-        width=line_width
-    )
+    draw.line([(x_right, y_top), (x_center, y_middle)], fill=symbol_color, width=line_width)
 
     # 中间竖线
-    draw.line(
-        [(x_center, y_middle), (x_center, y_bottom)],
-        fill=symbol_color,
-        width=line_width
-    )
+    draw.line([(x_center, y_middle), (x_center, y_bottom)], fill=symbol_color, width=line_width)
 
     # 两条横线
     h_line_top = offset + inner_size * 0.42
@@ -85,19 +73,17 @@ def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:
     h_line_right = offset + inner_size * 0.75
 
     draw.line(
-        [(h_line_left, h_line_top), (h_line_right, h_line_top)],
-        fill=symbol_color,
-        width=line_width
+        [(h_line_left, h_line_top), (h_line_right, h_line_top)], fill=symbol_color, width=line_width
     )
 
     draw.line(
         [(h_line_left, h_line_bottom), (h_line_right, h_line_bottom)],
         fill=symbol_color,
-        width=line_width
+        width=line_width,
     )
 
     # 保存图标
-    img.save(output_path, 'PNG', optimize=True)
+    img.save(output_path, "PNG", optimize=True)
     print(f"已生成: {output_path.name} ({size}x{size})")
 
 
@@ -105,7 +91,7 @@ def main():
     """生成所有需要的图标尺寸"""
     # 确定图标输出目录
     script_dir = Path(__file__).parent
-    icons_dir = script_dir / 'icons'
+    icons_dir = script_dir / "icons"
     icons_dir.mkdir(exist_ok=True)
 
     print("开始生成 PWA 图标...")
@@ -115,7 +101,7 @@ def main():
     standard_sizes = [72, 96, 128, 144, 152, 192, 384, 512]
 
     for size in standard_sizes:
-        output_path = icons_dir / f'icon-{size}.png'
+        output_path = icons_dir / f"icon-{size}.png"
         create_icon(size, output_path, maskable=False)
 
     print()
@@ -126,7 +112,7 @@ def main():
     maskable_sizes = [192, 512]
 
     for size in maskable_sizes:
-        output_path = icons_dir / f'icon-maskable-{size}.png'
+        output_path = icons_dir / f"icon-maskable-{size}.png"
         create_icon(size, output_path, maskable=True)
 
     print()
@@ -140,7 +126,7 @@ def main():
     print("  - 可以使用在线工具进一步优化图标：https://realfavicongenerator.net/")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         main()
     except ImportError:

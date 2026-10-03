@@ -265,9 +265,7 @@ def get_portfolio_snapshots() -> tuple[Any, int]:
 
         # 查询快照
         stmt_snapshots = (
-            select(PortfolioSnapshot)
-            .where(and_(*conditions))
-            .order_by(PortfolioSnapshot.date)
+            select(PortfolioSnapshot).where(and_(*conditions)).order_by(PortfolioSnapshot.date)
         )
         snapshots = session.execute(stmt_snapshots).scalars().all()
 

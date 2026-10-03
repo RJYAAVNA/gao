@@ -163,20 +163,14 @@ def calculate_portfolio_valuation(
             Decimal("0"),
         )
         total_unrealized_pnl = sum(
-            (
-                pv.unrealized_pnl
-                for pv in position_valuations
-                if pv.unrealized_pnl is not None
-            ),
+            (pv.unrealized_pnl for pv in position_valuations if pv.unrealized_pnl is not None),
             Decimal("0"),
         )
         cumulative_pnl = total_unrealized_pnl + total_realized_pnl
         completeness = Completeness.COMPLETE
 
         # 检查是否有使用旧净值的情况
-        if any(
-            pv.quality == Completeness.CARRIED_FORWARD for pv in position_valuations
-        ):
+        if any(pv.quality == Completeness.CARRIED_FORWARD for pv in position_valuations):
             completeness = Completeness.CARRIED_FORWARD
         elif any(pv.quality == Completeness.STALE for pv in position_valuations):
             completeness = Completeness.STALE
@@ -185,9 +179,7 @@ def calculate_portfolio_valuation(
         total_market_value = None
         total_unrealized_pnl = None
         cumulative_pnl = None
-        completeness = (
-            Completeness.MISSING if valued_product_count == 0 else Completeness.PARTIAL
-        )
+        completeness = Completeness.MISSING if valued_product_count == 0 else Completeness.PARTIAL
 
     return PortfolioValuation(
         user_id=user_id,
