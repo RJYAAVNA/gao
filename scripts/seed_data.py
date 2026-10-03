@@ -52,7 +52,6 @@ def seed_all() -> None:
                 username="demo",
                 password="password",
                 email="demo@example.com",
-                is_admin=True,
             )
             db.commit()
             print(f"✓ 创建用户: {user.username} (ID: {user.id})")
@@ -62,173 +61,254 @@ def seed_all() -> None:
             # 获取已存在的用户
             from sqlalchemy import select
 
-            from ledger.db.models.auth import User
+            from ledger.db.models.identity import User
 
             user = db.execute(select(User).where(User.username == "demo")).scalar_one()
             print(f"✓ 使用已存在用户: {user.username} (ID: {user.id})")
 
         # 2. 创建机构
         print("\n🏦 创建机构...")
-        bocwm = create_institution(
-            db,
-            name="中银理财",
-            short_name="BOCWM",
-            institution_type=InstitutionType.WEALTH_MGMT,
-        )
-        cmb = create_institution(
-            db,
-            name="招商银行",
-            short_name="CMB",
-            institution_type=InstitutionType.BANK,
-        )
-        db.commit()
-        print(f"✓ 创建机构: {bocwm.name} (ID: {bocwm.id})")
-        print(f"✓ 创建机构: {cmb.name} (ID: {cmb.id})")
+        from sqlalchemy import select
+
+        from ledger.db.models.catalog import Institution
+
+        # 尝试创建或获取机构
+        try:
+            bocwm = create_institution(
+                db,
+                name="中银理财",
+                institution_type=InstitutionType.ISSUER,
+            )
+            db.commit()
+            print(f"✓ 创建机构: {bocwm.name} (ID: {bocwm.id})")
+        except Exception as e:
+            print(f"机构可能已存在: {e}")
+            db.rollback()
+            bocwm = db.execute(
+                select(Institution).where(
+                    Institution.name == "中银理财",
+                    Institution.institution_type == "issuer",
+                )
+            ).scalar_one()
+            print(f"✓ 使用已存在机构: {bocwm.name} (ID: {bocwm.id})")
+
+        try:
+            cmb = create_institution(
+                db,
+                name="招商银行",
+                institution_type=InstitutionType.BANK,
+            )
+            db.commit()
+            print(f"✓ 创建机构: {cmb.name} (ID: {cmb.id})")
+        except Exception as e:
+            print(f"机构可能已存在: {e}")
+            db.rollback()
+            cmb = db.execute(
+                select(Institution).where(
+                    Institution.name == "招商银行",
+                    Institution.institution_type == "bank",
+                )
+            ).scalar_one()
+            print(f"✓ 使用已存在机构: {cmb.name} (ID: {cmb.id})")
 
         # 3. 创建数据源
         print("\n📊 创建数据源...")
-        manual_source = DataSource(
-            name="manual",
-            display_name="手工数据",
-            url_pattern=None,
-            is_active=True,
-        )
-        db.add(manual_source)
-        db.commit()
-        print(f"✓ 创建数据源: {manual_source.display_name} (ID: {manual_source.id})")
+        try:
+            manual_source = DataSource(
+                adapter_key="manual",
+                display_name="手工数据",
+                base_url="",
+                enabled=True,
+                priority=999,
+                config={},
+                config_version=1,
+                consecutive_failures=0,
+            )
+            db.add(manual_source)
+            db.commit()
+            print(f"✓ 创建数据源: {manual_source.display_name} (ID: {manual_source.id})")
+        except Exception as e:
+            print(f"数据源可能已存在: {e}")
+            db.rollback()
+            manual_source = db.execute(
+                select(DataSource).where(DataSource.adapter_key == "manual")
+            ).scalar_one()
+            print(
+                f"✓ 使用已存在数据源: {manual_source.display_name} (ID: {manual_source.id})"
+            )
 
         # 4. 创建产品
         print("\n💼 创建产品...")
         products = []
         product_data = [
             {
-                "code": "BOCWM001",
+                "issuer_code": "BOCWM001",
                 "name": "中银理财稳富固收增强",
                 "institution": bocwm,
-                "valuation_method": ValuationMethod.COST,
+                "valuation_method": ValuationMethod.NET_VALUE,
             },
             {
-                "code": "BOCWM002",
+                "issuer_code": "BOCWM002",
                 "name": "中银理财稳健增利",
                 "institution": bocwm,
-                "valuation_method": ValuationMethod.MARKET,
+                "valuation_method": ValuationMethod.NET_VALUE,
             },
             {
-                "code": "CMB001",
+                "issuer_code": "CMB001",
                 "name": "招银理财日日欣",
                 "institution": cmb,
-                "valuation_method": ValuationMethod.MARKET,
+                "valuation_method": ValuationMethod.NET_VALUE,
             },
         ]
 
         for pd in product_data:
-            product = create_product(
-                db,
-                code=pd["code"],
-                name=pd["name"],
-                institution_id=pd["institution"].id,
-                valuation_method=pd["valuation_method"],
-            )
-            products.append(product)
-            print(f"✓ 创建产品: {product.name} (ID: {product.id})")
+            try:
+                product = create_product(
+                    db,
+                    issuer_id=pd["institution"].id,
+                    issuer_code=pd["issuer_code"],
+                    name=pd["name"],
+                    valuation_method=pd["valuation_method"],
+                )
+                db.commit()
+                products.append(product)
+                print(f"✓ 创建产品: {product.name} (ID: {product.id})")
+            except Exception as e:
+                print(f"产品可能已存在: {e}")
+                db.rollback()
+                from ledger.db.models.catalog import Product
+
+                product = db.execute(
+                    select(Product).where(
+                        Product.issuer_id == pd["institution"].id,
+                        Product.issuer_code == pd["issuer_code"],
+                    )
+                ).scalar_one()
+                products.append(product)
+                print(f"✓ 使用已存在产品: {product.name} (ID: {product.id})")
 
             # 关联数据源
-            mapping = ProductSourceMapping(
-                product_id=product.id,
-                source_id=manual_source.id,
-                external_code=product.code,
-                is_primary=True,
-            )
-            db.add(mapping)
+            try:
+                existing_mapping = db.execute(
+                    select(ProductSourceMapping).where(
+                        ProductSourceMapping.product_id == product.id,
+                        ProductSourceMapping.source_id == manual_source.id,
+                    )
+                ).scalar_one_or_none()
 
-        db.commit()
+                if not existing_mapping:
+                    mapping = ProductSourceMapping(
+                        product_id=product.id,
+                        source_id=manual_source.id,
+                        source_product_id=product.issuer_code,
+                        enabled=True,
+                    )
+                    db.add(mapping)
+                    db.commit()
+            except Exception as e:
+                print(f"产品数据源映射可能已存在: {e}")
+                db.rollback()
 
         # 5. 创建净值数据
         print("\n📈 创建净值数据...")
         base_date = date.today() - timedelta(days=30)
-        for product in products:
-            # 为每个产品创建 5 条净值数据
-            for day_offset in range(0, 25, 5):
-                obs_date = base_date + timedelta(days=day_offset)
-                nav_value = Decimal("1.0000") + Decimal(str(day_offset * 0.001))
 
-                # 创建 observation head
-                head = ObservationHead(
-                    product_id=product.id,
-                    source_id=manual_source.id,
-                    metric_type=MetricType.NAV,
-                    observation_date=obs_date,
-                    quality_status=QualityStatus.VERIFIED,
-                    collected_at=datetime.now(),
-                )
-                db.add(head)
-                db.flush()
+        # 先检查是否已有净值数据
+        existing_obs = db.execute(
+            select(Observation).where(
+                Observation.product_id.in_([p.id for p in products])
+            )
+        ).first()
 
-                # 创建 observation
-                obs = Observation(
-                    head_id=head.id,
-                    value=nav_value,
-                )
-                db.add(obs)
+        if existing_obs:
+            print("净值数据已存在，跳过创建")
+        else:
+            for product in products:
+                # 为每个产品创建 5 条净值数据
+                for day_offset in range(0, 25, 5):
+                    obs_date = base_date + timedelta(days=day_offset)
+                    nav_value = Decimal("1.0000") + Decimal(str(day_offset * 0.001))
 
-            print(f"✓ 为产品 {product.code} 创建 5 条净值数据")
+                    # 直接创建 observation
+                    obs = Observation(
+                        product_id=product.id,
+                        source_id=manual_source.id,
+                        valuation_date=obs_date,
+                        metric_type=MetricType.UNIT_NAV,
+                        revision=0,
+                        value=nav_value,
+                        currency="CNY",
+                        quality_status=QualityStatus.VERIFIED,
+                        parser_version="manual",
+                    )
+                    db.add(obs)
 
-        db.commit()
+                print(f"✓ 为产品 {product.issuer_code} 创建 5 条净值数据")
+
+            db.commit()
 
         # 6. 创建账户
         print("\n💰 创建账户...")
-        account = Account(
-            user_id=user.id,
-            name="我的投资账户",
-            alias="demo_account",
-        )
-        db.add(account)
-        db.commit()
-        print(f"✓ 创建账户: {account.name} (ID: {account.id})")
+        try:
+            account = BankAccount(
+                user_id=user.id,
+                alias="招商银行储蓄卡",
+                bank_id=cmb.id,
+            )
+            db.add(account)
+            db.commit()
+            print(f"✓ 创建账户: {account.alias} (ID: {account.id})")
+        except Exception as e:
+            print(f"账户可能已存在: {e}")
+            db.rollback()
+            account = db.execute(
+                select(BankAccount).where(
+                    BankAccount.user_id == user.id, BankAccount.alias == "招商银行储蓄卡"
+                )
+            ).scalar_one()
+            print(f"✓ 使用已存在账户: {account.alias} (ID: {account.id})")
 
         # 7. 创建交易记录
         print("\n📝 创建交易记录...")
         transaction_data = [
             {
                 "product": products[0],
-                "direction": TransactionDirection.BUY,
-                "transaction_date": base_date,
-                "amount": Decimal("10000.00"),
-                "shares": Decimal("10000.00"),
-                "nav": Decimal("1.0000"),
+                "type": TransactionType.BUY,
+                "effective_date": base_date,
+                "cash_amount": Decimal("-10000.00"),
+                "shares_delta": Decimal("10000.00"),
             },
             {
                 "product": products[1],
-                "direction": TransactionDirection.BUY,
-                "transaction_date": base_date + timedelta(days=5),
-                "amount": Decimal("20000.00"),
-                "shares": Decimal("19950.25"),
-                "nav": Decimal("1.0025"),
+                "type": TransactionType.BUY,
+                "effective_date": base_date + timedelta(days=5),
+                "cash_amount": Decimal("-20000.00"),
+                "shares_delta": Decimal("19950.25"),
             },
             {
                 "product": products[2],
-                "direction": TransactionDirection.BUY,
-                "transaction_date": base_date + timedelta(days=10),
-                "amount": Decimal("15000.00"),
-                "shares": Decimal("14925.37"),
-                "nav": Decimal("1.0050"),
+                "type": TransactionType.BUY,
+                "effective_date": base_date + timedelta(days=10),
+                "cash_amount": Decimal("-15000.00"),
+                "shares_delta": Decimal("14925.37"),
             },
         ]
 
         for td in transaction_data:
             transaction = Transaction(
+                user_id=user.id,
                 account_id=account.id,
                 product_id=td["product"].id,
-                direction=td["direction"],
-                transaction_date=td["transaction_date"],
-                amount=td["amount"],
-                shares=td["shares"],
-                nav=td["nav"],
+                type=td["type"],
+                effective_date=td["effective_date"],
+                cash_amount=td["cash_amount"],
+                shares_delta=td["shares_delta"],
+                fee=Decimal("0"),
             )
             db.add(transaction)
             print(
-                f"✓ 创建交易: {td['product'].code} "
-                f"{td['direction'].value} {td['amount']} 元"
+                f"✓ 创建交易: {td['product'].issuer_code} "
+                f"{td['type'].value} {abs(td['cash_amount'])} 元"
             )
 
         db.commit()

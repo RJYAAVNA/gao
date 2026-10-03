@@ -170,7 +170,7 @@ input:disabled + .toggle-slider {
 <script>
 function handleLogout() {
     if (confirm('确定要退出登录吗？')) {
-        window.location.href = '/auth/logout';
+        window.location.href = '{{ url_for("main.logout") }}';
     }
 }
 </script>

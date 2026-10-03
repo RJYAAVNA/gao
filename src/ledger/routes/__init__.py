@@ -8,115 +8,83 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, render_template, send_from_directory
+from flask import Blueprint, current_app, jsonify, redirect, render_template, request, send_from_directory, url_for
+
+from ledger.auth import get_current_user_id
+from ledger.auth.session import clear_current_user, set_current_user
+from ledger.db.models.identity import User
+from ledger.db.session import get_session
+from ledger.portfolio.summary_service import get_simple_portfolio_summary, get_top_positions
 
 bp = Blueprint("main", __name__)
 
 
 @bp.route("/")
-def index() -> str:
+def index() -> str | Any:
     """首页 - 资产概览。"""
-    # 模拟数据，实际应从数据库获取
-    summary = {
-        "total_market_value": 150000.00,
-        "total_pnl": 8500.00,
-        "total_return": 0.0601,
-        "position_count": 5,
-        "annualized_return": 0.0725,
-        "valuation_date": date.today().strftime("%Y-%m-%d"),
-    }
+    user_id = get_current_user_id()
 
-    top_positions = [
-        {
-            "id": 1,
-            "product_name": "招商银行日日欣",
-            "product_code": "CMB001",
-            "quantity": 50000,
-            "market_value": 51200.00,
-            "cost_basis": 50000.00,
-            "pnl": 1200.00,
-            "return_rate": 0.024,
-        },
-        {
-            "id": 2,
-            "product_name": "工商银行稳利365",
-            "product_code": "ICBC365",
-            "quantity": 40000,
-            "market_value": 41800.00,
-            "cost_basis": 40000.00,
-            "pnl": 1800.00,
-            "return_rate": 0.045,
-        },
-        {
-            "id": 3,
-            "product_name": "建设银行天天盈",
-            "product_code": "CCB888",
-            "quantity": 30000,
-            "market_value": 31500.00,
-            "cost_basis": 30000.00,
-            "pnl": 1500.00,
-            "return_rate": 0.05,
-        },
-    ]
+    # 如果用户未登录，重定向到登录页
+    if user_id is None:
+        return redirect(url_for("main.login"))
+
+    # 获取用户的组合汇总数据
+    with get_session() as db:
+        portfolio_summary = get_simple_portfolio_summary(db, user_id)
+        position_summaries = get_top_positions(db, user_id, limit=5)
+
+        summary = {
+            "total_market_value": float(portfolio_summary.total_market_value),
+            "total_pnl": float(portfolio_summary.total_pnl),
+            "total_return": float(portfolio_summary.total_return),
+            "position_count": portfolio_summary.position_count,
+            "annualized_return": float(portfolio_summary.annualized_return),
+            "valuation_date": portfolio_summary.valuation_date.strftime("%Y-%m-%d"),
+        }
+
+        top_positions = [
+            {
+                "id": str(pos.id),
+                "product_name": pos.product_name,
+                "product_code": pos.product_code,
+                "quantity": float(pos.shares),
+                "market_value": float(pos.market_value),
+                "cost_basis": float(pos.cost),
+                "pnl": float(pos.pnl),
+                "return_rate": float(pos.return_rate),
+            }
+            for pos in position_summaries
+        ]
 
     return render_template("pages/index.html", summary=summary, top_positions=top_positions)
 
 
 @bp.route("/positions")
-def positions() -> str:
+def positions() -> str | Any:
     """持仓列表页。"""
-    positions_data = [
-        {
-            "id": 1,
-            "product_name": "招商银行日日欣",
-            "product_code": "CMB001",
-            "quantity": 50000,
-            "market_value": 51200.00,
-            "cost_basis": 50000.00,
-            "pnl": 1200.00,
-            "return_rate": 0.024,
-        },
-        {
-            "id": 2,
-            "product_name": "工商银行稳利365",
-            "product_code": "ICBC365",
-            "quantity": 40000,
-            "market_value": 41800.00,
-            "cost_basis": 40000.00,
-            "pnl": 1800.00,
-            "return_rate": 0.045,
-        },
-        {
-            "id": 3,
-            "product_name": "建设银行天天盈",
-            "product_code": "CCB888",
-            "quantity": 30000,
-            "market_value": 31500.00,
-            "cost_basis": 30000.00,
-            "pnl": 1500.00,
-            "return_rate": 0.05,
-        },
-        {
-            "id": 4,
-            "product_name": "中国银行稳健增利",
-            "product_code": "BOC520",
-            "quantity": 20000,
-            "market_value": 19500.00,
-            "cost_basis": 20000.00,
-            "pnl": -500.00,
-            "return_rate": -0.025,
-        },
-        {
-            "id": 5,
-            "product_name": "交通银行双利计划",
-            "product_code": "BCM777",
-            "quantity": 10000,
-            "market_value": 10500.00,
-            "cost_basis": 10000.00,
-            "pnl": 500.00,
-            "return_rate": 0.05,
-        },
-    ]
+    user_id = get_current_user_id()
+
+    # 如果用户未登录，重定向到登录页
+    if user_id is None:
+        return redirect(url_for("main.login"))
+
+    # 获取用户的持仓数据
+    with get_session() as db:
+        position_summaries = get_top_positions(db, user_id, limit=100)
+
+        positions_data = [
+            {
+                "id": str(pos.id),
+                "product_name": pos.product_name,
+                "product_code": pos.product_code,
+                "quantity": float(pos.shares),
+                "market_value": float(pos.market_value),
+                "cost_basis": float(pos.cost),
+                "pnl": float(pos.pnl),
+                "return_rate": float(pos.return_rate),
+            }
+            for pos in position_summaries
+        ]
 
     return render_template("pages/positions.html", positions=positions_data)
 
@@ -213,3 +181,42 @@ def service_worker() -> Any:
 def offline() -> str:
     """离线页面。"""
     return render_template("pages/offline.html")
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login() -> str | Any:
+    """登录页面。"""
+    # 如果已经登录，重定向到首页
+    if get_current_user_id() is not None:
+        return redirect(url_for("main.index"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            return render_template("pages/login.html", error="请输入用户名和密码")
+
+        # 验证用户
+        with get_session() as db:
+            user = db.query(User).filter(User.username == username).first()
+            if user is None or not user.check_password(password):
+                return render_template("pages/login.html", error="用户名或密码错误")
+
+            # 设置会话
+            set_current_user(user)
+
+        # 登录成功，重定向到首页
+        next_url = request.args.get("next")
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
+        return redirect(url_for("main.index"))
+
+    return render_template("pages/login.html")
+
+
+@bp.route("/logout")
+def logout() -> Any:
+    """登出。"""
+    clear_current_user()
+    return redirect(url_for("main.login"))

@@ -12,8 +12,6 @@ from typing import Any, TypeVar, cast
 
 from flask import Blueprint, jsonify, request
 from flask.typing import ResponseReturnValue
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 
 from ledger.auth import (
     AccountDisabledError,
@@ -29,9 +27,6 @@ from ledger.config import get_settings
 from ledger.db.session import get_session
 
 bp = Blueprint("auth", __name__, url_prefix="/api/auth")
-
-# 限流器，防止暴力破解
-limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -70,7 +65,6 @@ def admin_required(f: F) -> F:
 
 
 @bp.post("/login")
-@limiter.limit(lambda: get_settings().rate_limit_login)
 def login() -> ResponseReturnValue:
     """用户登录。
 

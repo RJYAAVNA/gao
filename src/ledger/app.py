@@ -42,19 +42,47 @@ def create_app(settings: Settings | None = None) -> Flask:
     )
 
     csrf.init_app(app)
+
     _register_health_routes(app)
     _register_blueprints(app)
     _register_error_handlers(app)
+
+    # 豁免所有 API 蓝图的 CSRF 检查
+    _exempt_api_blueprints(app)
+
+    return app
+
+
+def _exempt_api_blueprints(app: Flask) -> None:
+    """为所有 API 蓝图豁免 CSRF 检查。"""
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint and rule.rule.startswith('/api/'):
+            csrf.exempt(app.view_functions[rule.endpoint])
 
     return app
 
 
 def _register_blueprints(app: Flask) -> None:
     """注册蓝图。"""
+    from ledger.api.accounts import bp as accounts_bp
+    from ledger.api.auth import bp as auth_bp
+    from ledger.api.catalog import bp as catalog_bp
+    from ledger.api.jobs import bp as jobs_bp
+    from ledger.api.positions import bp as positions_bp
+    from ledger.api.transactions import bp as transactions_bp
     from ledger.api.valuation import bp as valuation_bp
     from ledger.routes import bp as main_bp
 
+    # 注册 API 蓝图
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(accounts_bp)
+    app.register_blueprint(catalog_bp)
+    app.register_blueprint(jobs_bp)
+    app.register_blueprint(positions_bp)
+    app.register_blueprint(transactions_bp)
     app.register_blueprint(valuation_bp)
+
+    # 注册前端页面蓝图
     app.register_blueprint(main_bp)
 
 

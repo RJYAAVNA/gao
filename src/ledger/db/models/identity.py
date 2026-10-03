@@ -21,6 +21,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from argon2 import PasswordHasher
+
 from ledger.db.base import Base, TimestampMixin, UUIDPrimaryKey, enum_column
 
 
@@ -76,6 +78,15 @@ class User(Base, UUIDPrimaryKey, TimestampMixin):
     @property
     def can_login(self) -> bool:
         return self.status is UserStatus.ACTIVE
+
+    def check_password(self, password: str) -> bool:
+        """验证密码是否正确。"""
+        ph = PasswordHasher()
+        try:
+            ph.verify(self.password_hash, password)
+            return True
+        except Exception:
+            return False
 
 
 class TokenPurpose(str, enum.Enum):
