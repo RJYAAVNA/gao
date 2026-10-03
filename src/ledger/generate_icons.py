@@ -39,7 +39,7 @@ def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:
 
     # 绘制圆角矩形
     draw.rounded_rectangle(
-        [offset, offset, offset + inner_size, offset + inner_size],
+        (offset, offset, offset + inner_size, offset + inner_size),
         radius=corner_radius,
         fill=accent_color,
     )
