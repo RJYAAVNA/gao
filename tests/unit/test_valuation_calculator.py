@@ -115,7 +115,7 @@ class TestPortfolioValuation:
         position1 = PositionValuation(
             account_id=uuid.uuid4(),
             product_id=uuid.uuid4(),
-            date=valuation_date,
+            valuation_date=valuation_date,
             shares=Decimal("100"),
             cost=Decimal("100"),
             market_value=Decimal("110"),
@@ -130,7 +130,7 @@ class TestPortfolioValuation:
         position2 = PositionValuation(
             account_id=uuid.uuid4(),
             product_id=uuid.uuid4(),
-            date=valuation_date,
+            valuation_date=valuation_date,
             shares=Decimal("200"),
             cost=Decimal("200"),
             market_value=Decimal("210"),
@@ -167,7 +167,7 @@ class TestPortfolioValuation:
         position1 = PositionValuation(
             account_id=uuid.uuid4(),
             product_id=uuid.uuid4(),
-            date=valuation_date,
+            valuation_date=valuation_date,
             shares=Decimal("100"),
             cost=Decimal("100"),
             market_value=Decimal("110"),
@@ -182,7 +182,7 @@ class TestPortfolioValuation:
         position2 = PositionValuation(
             account_id=uuid.uuid4(),
             product_id=uuid.uuid4(),
-            date=valuation_date,
+            valuation_date=valuation_date,
             shares=Decimal("200"),
             cost=Decimal("200"),
             market_value=None,

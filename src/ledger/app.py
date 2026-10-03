@@ -45,7 +45,6 @@ def create_app(settings: Settings | None = None) -> Flask:
     _register_health_routes(app)
     _register_blueprints(app)
     _register_error_handlers(app)
-    _register_blueprints(app)
 
     return app
 
