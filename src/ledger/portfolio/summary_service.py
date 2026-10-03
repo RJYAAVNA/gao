@@ -178,8 +178,15 @@ def get_top_positions(
 
     # 查询该日期的持仓快照，并关联产品信息
     snapshot_stmt = (
-        select(PositionSnapshot, Product)
+        select(PositionSnapshot, Product, Position)
         .join(Product, PositionSnapshot.product_id == Product.id)
+        .join(
+            Position,
+            and_(
+                Position.account_id == PositionSnapshot.account_id,
+                Position.product_id == PositionSnapshot.product_id,
+            ),
+        )
         .where(
             and_(
                 PositionSnapshot.run_id == run.id,
@@ -194,7 +201,7 @@ def get_top_positions(
     results = db.execute(snapshot_stmt).all()
 
     summaries = []
-    for snapshot, product in results:
+    for snapshot, product, position in results:
         # 计算收益率
         if snapshot.cost > 0 and snapshot.unrealized_pnl:
             return_rate = snapshot.unrealized_pnl / snapshot.cost
@@ -203,7 +210,7 @@ def get_top_positions(
 
         summaries.append(
             PositionSummary(
-                id=snapshot.id,
+                id=position.id,
                 account_id=snapshot.account_id,
                 product_id=snapshot.product_id,
                 product_code=product.issuer_code,

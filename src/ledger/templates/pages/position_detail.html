@@ -1,0 +1,133 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ position.product_name }} - 持仓详情{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/positions" class="back-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+        返回
+    </a>
+    <h1>持仓详情</h1>
+</div>
+
+<!-- 产品信息 -->
+<div class="card mb-lg">
+    <h2 class="card-title">{{ position.product_name }}</h2>
+    <div class="text-muted mb-lg">{{ position.product_code }}</div>
+
+    <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="stat-item">
+            <div class="stat-label">市值</div>
+            <div class="stat-value">¥{{ "{:,.2f}".format(position.market_value) }}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">成本</div>
+            <div class="stat-value">¥{{ "{:,.2f}".format(position.cost_basis) }}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">盈亏</div>
+            <div class="stat-value {% if position.pnl >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ "{:+,.2f}".format(position.pnl) }}
+            </div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">收益率</div>
+            <div class="stat-value {% if position.return_rate >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ "{:+.2f}%".format(position.return_rate * 100) }}
+            </div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">持有份额</div>
+            <div class="stat-value">{{ "{:,.0f}".format(position.quantity) }}</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-label">单位净值</div>
+            <div class="stat-value">¥{{ "{:.4f}".format(position.unit_nav) }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- 交易记录 -->
+<div class="card">
+    <h2 class="card-title">交易记录</h2>
+    {% if transactions %}
+    <div class="transactions-list">
+        {% for txn in transactions %}
+        <div class="list-item">
+            <div style="flex: 1;">
+                <div class="font-semibold">
+                    {% if txn.transaction_type == 'buy' %}
+                    申购
+                    {% elif txn.transaction_type == 'sell' %}
+                    赎回
+                    {% else %}
+                    {{ txn.transaction_type }}
+                    {% endif %}
+                </div>
+                <div class="text-muted" style="font-size: 0.875rem; margin-top: var(--space-xs);">
+                    {{ txn.transaction_date.strftime('%Y-%m-%d') }}
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-semibold">{{ "{:,.0f}".format(txn.shares) }} 份</div>
+                <div class="text-muted" style="font-size: 0.875rem; margin-top: var(--space-xs);">
+                    ¥{{ "{:.4f}".format(txn.price) }}
+                </div>
+                <div class="mt-sm" style="font-weight: 600;">
+                    ¥{{ "{:,.2f}".format(txn.amount) }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">暂无交易记录</p>
+    {% endif %}
+</div>
+
+<style>
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-primary);
+    text-decoration: none;
+    margin-bottom: var(--space-md);
+    font-weight: 500;
+}
+
+.back-link:hover {
+    opacity: 0.8;
+}
+
+.stats-grid {
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground);
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+</style>
+{% endblock %}

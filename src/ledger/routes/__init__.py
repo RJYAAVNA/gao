@@ -13,6 +13,7 @@ from flask import Blueprint, current_app, jsonify, redirect, render_template, re
 from ledger.auth import get_current_user_id
 from ledger.auth.session import clear_current_user, set_current_user
 from ledger.db.models.identity import User
+from ledger.db.models.portfolio import Position, Transaction
 from ledger.db.session import get_session
 from ledger.portfolio.summary_service import get_simple_portfolio_summary, get_top_positions
 
@@ -87,6 +88,62 @@ def positions() -> str | Any:
         ]
 
     return render_template("pages/positions.html", positions=positions_data)
+
+
+@bp.route("/positions/<uuid:position_id>")
+def position_detail(position_id: str) -> str | Any:
+    """持仓详情页。"""
+    user_id = get_current_user_id()
+
+    # 如果用户未登录，重定向到登录页
+    if user_id is None:
+        return redirect(url_for("main.login"))
+
+    with get_session() as db:
+        # 获取持仓信息
+        position = db.query(Position).filter(Position.id == position_id, Position.user_id == user_id).first()
+
+        if not position:
+            return jsonify({"error": "not_found"}), 404
+
+        # 获取相关交易记录
+        transactions_raw = (
+            db.query(Transaction)
+            .filter(
+                Transaction.account_id == position.account_id,
+                Transaction.product_id == position.product_id,
+            )
+            .order_by(Transaction.effective_date.desc())
+            .all()
+        )
+
+        # 转换交易数据为模板格式
+        transactions = []
+        for txn in transactions_raw:
+            # 计算单价（如果有份额变动）
+            price = abs(txn.cash_amount / txn.shares_delta) if txn.shares_delta != 0 else 0
+
+            transactions.append({
+                "transaction_type": txn.type.value,
+                "transaction_date": txn.effective_date,
+                "shares": abs(float(txn.shares_delta)),
+                "price": float(price),
+                "amount": float(txn.cash_amount),
+            })
+
+        # 构造持仓数据
+        position_data = {
+            "product_name": position.product.name,
+            "product_code": position.product.issuer_code,
+            "quantity": float(position.shares),
+            "market_value": float(position.market_value),
+            "cost_basis": float(position.cost),
+            "pnl": float(position.pnl),
+            "return_rate": float(position.return_rate),
+            "unit_nav": float(position.unit_nav),
+        }
+
+    return render_template("pages/position_detail.html", position=position_data, transactions=transactions)
 
 
 @bp.route("/analytics")
