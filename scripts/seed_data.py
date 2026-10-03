@@ -35,7 +35,7 @@ from ledger.db.models.market_data import (  # noqa: E402
     ObservationHead,
     QualityStatus,
 )
-from ledger.db.models.portfolio import Account, Transaction, TransactionDirection  # noqa: E402
+from ledger.db.models.portfolio import BankAccount, Transaction, TransactionType  # noqa: E402
 from ledger.db.session import get_session  # noqa: E402
 
 
