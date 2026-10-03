@@ -87,7 +87,7 @@ def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:
     print(f"已生成: {output_path.name} ({size}x{size})")
 
 
-def main():
+def main() -> None:
     """生成所有需要的图标尺寸"""
     # 确定图标输出目录
     script_dir = Path(__file__).parent

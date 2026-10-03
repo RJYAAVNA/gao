@@ -289,7 +289,7 @@ def execute_valuation_run(
                     user_id=run.user_id,
                     account_id=valuation.account_id,
                     product_id=valuation.product_id,
-                    date=valuation.date,
+                    date=valuation.valuation_date,
                     shares=valuation.shares,
                     cost=valuation.cost,
                     market_value=valuation.market_value,

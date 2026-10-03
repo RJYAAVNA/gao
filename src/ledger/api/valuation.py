@@ -60,7 +60,7 @@ class PositionSnapshotResponse(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID
     product_id: uuid.UUID
-    date: date
+    valuation_date: date
     shares: str  # Decimal 转为字符串
     cost: str
     market_value: str | None
@@ -74,7 +74,7 @@ class PortfolioSnapshotResponse(BaseModel):
     """组合快照响应。"""
 
     id: uuid.UUID
-    date: date
+    valuation_date: date
     currency: str
     market_value: str | None
     total_cost: str
@@ -273,7 +273,7 @@ def get_portfolio_snapshots() -> tuple[Any, int]:
             [
                 PortfolioSnapshotResponse(
                     id=snap.id,
-                    date=snap.date,
+                    valuation_date=snap.date,
                     currency=snap.currency,
                     market_value=str(snap.market_value) if snap.market_value else None,
                     total_cost=str(snap.total_cost),
@@ -356,7 +356,7 @@ def get_position_snapshots() -> tuple[Any, int]:
                     id=snap.id,
                     account_id=snap.account_id,
                     product_id=snap.product_id,
-                    date=snap.date,
+                    valuation_date=snap.date,
                     shares=str(snap.shares),
                     cost=str(snap.cost),
                     market_value=str(snap.market_value) if snap.market_value else None,

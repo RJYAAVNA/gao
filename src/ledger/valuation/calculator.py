@@ -38,7 +38,7 @@ class PositionValuation:
 
     account_id: uuid.UUID
     product_id: uuid.UUID
-    date: date
+    valuation_date: date
     shares: Decimal
     cost: Decimal
     market_value: Decimal | None
@@ -117,7 +117,7 @@ def calculate_position_valuation(
     return PositionValuation(
         account_id=position.account_id,
         product_id=position.product_id,
-        date=valuation_date,
+        valuation_date=valuation_date,
         shares=position.shares,
         cost=position.remaining_cost,
         market_value=market_value,

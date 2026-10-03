@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
-from flask import Blueprint, current_app, render_template, send_from_directory
+from flask import Blueprint, current_app, jsonify, render_template, send_from_directory
 
 bp = Blueprint("main", __name__)
 
@@ -194,17 +194,19 @@ def export_data() -> str:
 @bp.route("/manifest.json")
 def manifest() -> Any:
     """返回 PWA manifest 文件。"""
-    return send_from_directory(
-        current_app.static_folder, "manifest.json", mimetype="application/manifest+json"
-    )
+    static_folder = current_app.static_folder
+    if static_folder is None:
+        return jsonify({"error": "Static folder not configured"}), 500
+    return send_from_directory(static_folder, "manifest.json", mimetype="application/manifest+json")
 
 
 @bp.route("/sw.js")
 def service_worker() -> Any:
     """返回 Service Worker 文件。"""
-    return send_from_directory(
-        current_app.static_folder, "sw.js", mimetype="application/javascript"
-    )
+    static_folder = current_app.static_folder
+    if static_folder is None:
+        return jsonify({"error": "Static folder not configured"}), 500
+    return send_from_directory(static_folder, "sw.js", mimetype="application/javascript")
 
 
 @bp.route("/offline")
