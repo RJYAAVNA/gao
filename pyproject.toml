@@ -98,3 +98,8 @@ markers = [
 [tool.coverage.run]
 source = ["src/ledger"]
 branch = true
+
+[dependency-groups]
+dev = [
+    "types-pillow>=10.2.0.20240822",
+]

@@ -1,0 +1,151 @@
+{
+  "name": "多银行理财台账",
+  "short_name": "理财台账",
+  "description": "管理银行理财持仓与交易，自动采集产品净值，按日/周/月/自定义区间跟踪收益",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/static/icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "finance",
+    "productivity",
+    "utilities"
+  ],
+  "screenshots": [
+    {
+      "src": "/static/screenshots/home.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "label": "首页 - 资产概览"
+    },
+    {
+      "src": "/static/screenshots/positions.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "label": "持仓列表"
+    },
+    {
+      "src": "/static/screenshots/analytics.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "label": "收益分析"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "持仓",
+      "short_name": "持仓",
+      "description": "查看持仓列表",
+      "url": "/positions",
+      "icons": [
+        {
+          "src": "/static/icons/shortcut-positions.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "分析",
+      "short_name": "分析",
+      "description": "收益分析",
+      "url": "/analytics",
+      "icons": [
+        {
+          "src": "/static/icons/shortcut-analytics.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "iarc_rating_id": "",
+  "share_target": {
+    "action": "/import",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": [
+            "text/csv",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          ]
+        }
+      ]
+    }
+  }
+}

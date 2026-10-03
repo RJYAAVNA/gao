@@ -1,0 +1,135 @@
+{% extends "base/layout.html" %}
+
+{% block title %}持仓列表 - 多银行理财台账{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>持仓列表</h1>
+    <p class="text-muted">管理您的理财产品持仓</p>
+</div>
+
+<!-- Filter Tabs -->
+<div class="filter-tabs mb-lg">
+    <button class="filter-tab active" data-filter="all">
+        全部 ({{ positions|length }})
+    </button>
+    <button class="filter-tab" data-filter="profit">
+        盈利
+    </button>
+    <button class="filter-tab" data-filter="loss">
+        亏损
+    </button>
+</div>
+
+<!-- Positions List -->
+<div class="positions-list">
+    {% for position in positions %}
+    <div class="list-item grid-item" data-href="/positions/{{ position.id }}" data-filter-type="{% if position.pnl >= 0 %}profit{% else %}loss{% endif %}" role="link" tabindex="0">
+        <div style="flex: 1;">
+            <div class="font-semibold">{{ position.product_name }}</div>
+            <div class="text-muted" style="font-size: 0.875rem; margin-top: var(--space-xs);">
+                {{ position.product_code }}
+            </div>
+            <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm); align-items: center;">
+                <span class="badge {% if position.pnl >= 0 %}badge-success{% else %}badge-danger{% endif %}">
+                    {{ "{:+.2f}%".format(position.return_rate * 100) }}
+                </span>
+                <span class="text-muted" style="font-size: 0.75rem;">
+                    {{ "{:,.0f}".format(position.quantity) }} 份
+                </span>
+            </div>
+        </div>
+        <div class="text-right">
+            <div class="font-semibold" style="font-size: 1.125rem;">
+                ¥{{ "{:,.2f}".format(position.market_value) }}
+            </div>
+            <div class="text-muted" style="font-size: 0.875rem; margin-top: var(--space-xs);">
+                成本 ¥{{ "{:,.2f}".format(position.cost_basis) }}
+            </div>
+            <div class="mt-sm {% if position.pnl >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-weight: 600;">
+                {{ "{:+,.2f}".format(position.pnl) }}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if positions|length == 0 %}
+<div class="card text-center" style="padding: var(--space-2xl); margin-top: var(--space-lg);">
+    <svg class="mx-auto mb-md" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="opacity: 0.3; margin: 0 auto var(--space-md);">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2-2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    </svg>
+    <h3>暂无持仓</h3>
+    <p class="text-muted">添加您的第一笔交易开始记录</p>
+    <a href="/transactions/new" class="btn btn-primary mt-lg">添加交易</a>
+</div>
+{% endif %}
+
+<style>
+.filter-tabs {
+    display: flex;
+    gap: var(--space-sm);
+    overflow-x: auto;
+    padding-bottom: var(--space-xs);
+}
+
+.filter-tab {
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: 999px;
+    background: var(--color-muted);
+    color: var(--color-muted-foreground);
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms ease;
+    white-space: nowrap;
+    min-height: 44px;
+}
+
+.filter-tab:hover {
+    background: var(--color-border);
+    color: var(--color-foreground);
+}
+
+.filter-tab:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+}
+
+.filter-tab.active {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+}
+
+.list-item[data-filter-hidden="true"] {
+    display: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const filterTabs = document.querySelectorAll('.filter-tab');
+    const listItems = document.querySelectorAll('.list-item[data-filter-type]');
+
+    filterTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const filter = tab.dataset.filter;
+
+            // Update active state
+            filterTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Filter items
+            listItems.forEach(item => {
+                const filterType = item.dataset.filterType;
+                if (filter === 'all' || filterType === filter) {
+                    item.removeAttribute('data-filter-hidden');
+                } else {
+                    item.setAttribute('data-filter-hidden', 'true');
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

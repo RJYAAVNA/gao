@@ -1,0 +1,168 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ title }} - 多银行理财台账{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="content-grid">
+    <div class="grid-item info-card">
+        <h2>功能说明</h2>
+        <p class="info-text">{{ message }}</p>
+
+        <div class="feature-list">
+            <h3>计划功能：</h3>
+            <ul>
+                <li>手动触发全量估值</li>
+                <li>查看估值进度</li>
+                <li>查看估值历史记录</li>
+                <li>设置自动估值计划</li>
+            </ul>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" disabled>触发估值（开发中）</button>
+            <a href="/settings" class="btn btn-secondary">返回设置</a>
+        </div>
+    </div>
+
+    <div class="grid-item status-card">
+        <h2>估值状态</h2>
+        <div class="status-item">
+            <span class="status-label">上次估值时间：</span>
+            <span class="status-value">2026-10-03 12:00:00</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">估值状态：</span>
+            <span class="status-value status-success">已完成</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">估值数量：</span>
+            <span class="status-value">5 个持仓</span>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-card, .status-card {
+    background: var(--surface-2);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.info-text {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
+}
+
+.feature-list {
+    margin: var(--space-lg) 0;
+}
+
+.feature-list h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-md);
+    color: var(--text-primary);
+}
+
+.feature-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-list li {
+    padding: var(--space-sm) 0;
+    padding-left: var(--space-md);
+    position: relative;
+    color: var(--text-secondary);
+}
+
+.feature-list li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent-primary);
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+}
+
+.btn {
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-pill);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.btn-primary {
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: var(--surface-3);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: var(--surface-4);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    color: var(--text-secondary);
+}
+
+.status-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.status-success {
+    color: var(--success);
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

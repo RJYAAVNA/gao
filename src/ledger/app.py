@@ -43,10 +43,19 @@ def create_app(settings: Settings | None = None) -> Flask:
 
     csrf.init_app(app)
     _register_health_routes(app)
-    _register_error_handlers(app)
     _register_blueprints(app)
+    _register_error_handlers(app)
 
     return app
+
+
+def _register_blueprints(app: Flask) -> None:
+    """注册蓝图。"""
+    from ledger.api.valuation import bp as valuation_bp
+    from ledger.routes import bp as main_bp
+
+    app.register_blueprint(valuation_bp)
+    app.register_blueprint(main_bp)
 
 
 def _register_health_routes(app: Flask) -> None:
@@ -55,6 +64,33 @@ def _register_health_routes(app: Flask) -> None:
     /health/live 只判断进程活性；/health/ready 检查数据库与 schema。
     外部银行不可用不应让 Web 失去就绪状态。
     """
+
+    # API 根路径已移除，现在 / 由前端蓝图处理
+    # 如需查看 API 端点列表，访问 /health/live 或 /health/ready
+
+    @app.get("/api")
+    def api_index() -> Any:
+        """API 端点列表（已移至 /api）。"""
+        return jsonify(
+            {
+                "name": "Ledger API",
+                "version": "1.0.0",
+                "endpoints": {
+                    "health": {
+                        "live": "/health/live",
+                        "ready": "/health/ready",
+                    },
+                    "valuation": {
+                        "create_run": "POST /api/valuation/runs",
+                        "list_runs": "GET /api/valuation/runs",
+                        "current_run": "GET /api/valuation/runs/current",
+                        "portfolio_snapshots": "GET /api/valuation/snapshots/portfolio",
+                        "position_snapshots": "GET /api/valuation/snapshots/positions",
+                    },
+                },
+                "note": "所有 /api/valuation 端点需要用户认证",
+            }
+        )
 
     @app.get("/health/live")
     def health_live() -> Any:
@@ -90,13 +126,6 @@ def _register_error_handlers(app: Flask) -> None:
         return jsonify(error="internal_error"), 500
 
 
-def _register_blueprints(app: Flask) -> None:
-    """注册 API 蓝图。"""
-    from ledger.api import accounts, auth, catalog, jobs, positions, transactions
-
-    app.register_blueprint(auth.bp)
-    app.register_blueprint(accounts.bp)
-    app.register_blueprint(transactions.bp)
-    app.register_blueprint(positions.bp)
-    app.register_blueprint(catalog.bp)
-    app.register_blueprint(jobs.bp)
+if __name__ == "__main__":
+    app = create_app()
+    app.run(host="0.0.0.0", port=5000, debug=True)
