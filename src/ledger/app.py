@@ -43,9 +43,17 @@ def create_app(settings: Settings | None = None) -> Flask:
 
     csrf.init_app(app)
     _register_health_routes(app)
+    _register_blueprints(app)
     _register_error_handlers(app)
 
     return app
+
+
+def _register_blueprints(app: Flask) -> None:
+    """注册蓝图。"""
+    from ledger.api.valuation import bp as valuation_bp
+
+    app.register_blueprint(valuation_bp)
 
 
 def _register_health_routes(app: Flask) -> None:
