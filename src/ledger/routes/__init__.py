@@ -13,6 +13,7 @@ from sqlalchemy.orm import joinedload
 
 from ledger.auth import get_current_user_id
 from ledger.auth.session import clear_current_user, set_current_user
+from ledger.db.models.catalog import Product
 from ledger.db.models.identity import User
 from ledger.db.models.portfolio import Position, Transaction
 from ledger.db.session import get_session
@@ -101,16 +102,20 @@ def position_detail(position_id: str) -> str | Any:
         return redirect(url_for("main.login"))
 
     with get_session() as db:
-        # 获取持仓信息，预加载关联的 product
+        # 获取持仓信息
         position = (
             db.query(Position)
-            .options(joinedload(Position.product))
             .filter(Position.id == position_id, Position.user_id == user_id)
             .first()
         )
 
         if not position:
             return jsonify({"error": "not_found"}), 404
+
+        # 获取产品信息
+        product = db.query(Product).filter(Product.id == position.product_id).first()
+        if not product:
+            return jsonify({"error": "product_not_found"}), 404
 
         # 获取相关交易记录
         transactions_raw = (
@@ -139,8 +144,8 @@ def position_detail(position_id: str) -> str | Any:
 
         # 构造持仓数据
         position_data = {
-            "product_name": position.product.name,
-            "product_code": position.product.issuer_code,
+            "product_name": product.name,
+            "product_code": product.issuer_code,
             "quantity": float(position.shares),
             "market_value": float(position.market_value),
             "cost_basis": float(position.cost),
