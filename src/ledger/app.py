@@ -43,9 +43,17 @@ def create_app(settings: Settings | None = None) -> Flask:
 
     csrf.init_app(app)
     _register_health_routes(app)
+    _register_blueprints(app)
     _register_error_handlers(app)
 
     return app
+
+
+def _register_blueprints(app: Flask) -> None:
+    """注册蓝图。"""
+    from ledger.api.valuation import bp as valuation_bp
+
+    app.register_blueprint(valuation_bp)
 
 
 def _register_health_routes(app: Flask) -> None:
@@ -54,6 +62,30 @@ def _register_health_routes(app: Flask) -> None:
     /health/live 只判断进程活性；/health/ready 检查数据库与 schema。
     外部银行不可用不应让 Web 失去就绪状态。
     """
+
+    @app.get("/")
+    def index() -> Any:
+        """API 根路径，返回可用端点列表。"""
+        return jsonify(
+            {
+                "name": "Ledger API",
+                "version": "1.0.0",
+                "endpoints": {
+                    "health": {
+                        "live": "/health/live",
+                        "ready": "/health/ready",
+                    },
+                    "valuation": {
+                        "create_run": "POST /api/valuation/runs",
+                        "list_runs": "GET /api/valuation/runs",
+                        "current_run": "GET /api/valuation/runs/current",
+                        "portfolio_snapshots": "GET /api/valuation/snapshots/portfolio",
+                        "position_snapshots": "GET /api/valuation/snapshots/positions",
+                    },
+                },
+                "note": "所有 /api/valuation 端点需要用户认证",
+            }
+        )
 
     @app.get("/health/live")
     def health_live() -> Any:
