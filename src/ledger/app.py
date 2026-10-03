@@ -63,6 +63,30 @@ def _register_health_routes(app: Flask) -> None:
     外部银行不可用不应让 Web 失去就绪状态。
     """
 
+    @app.get("/")
+    def index() -> Any:
+        """API 根路径，返回可用端点列表。"""
+        return jsonify(
+            {
+                "name": "Ledger API",
+                "version": "1.0.0",
+                "endpoints": {
+                    "health": {
+                        "live": "/health/live",
+                        "ready": "/health/ready",
+                    },
+                    "valuation": {
+                        "create_run": "POST /api/valuation/runs",
+                        "list_runs": "GET /api/valuation/runs",
+                        "current_run": "GET /api/valuation/runs/current",
+                        "portfolio_snapshots": "GET /api/valuation/snapshots/portfolio",
+                        "position_snapshots": "GET /api/valuation/snapshots/positions",
+                    },
+                },
+                "note": "所有 /api/valuation 端点需要用户认证",
+            }
+        )
+
     @app.get("/health/live")
     def health_live() -> Any:
         return jsonify(status="ok")
