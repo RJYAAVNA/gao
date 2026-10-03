@@ -1,0 +1,177 @@
+{% extends "base/layout.html" %}
+
+{% block title %}设置 - 多银行理财台账{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>设置</h1>
+    <p class="text-muted">管理您的账户和应用偏好</p>
+</div>
+
+<!-- Settings Sections -->
+<section class="settings-section grid-item">
+    <h2 class="section-title">账户信息</h2>
+    <div class="list-item" role="button" tabindex="0">
+        <div>
+            <div class="font-semibold">用户名</div>
+            <div class="text-muted" style="font-size: 0.875rem;">{{ user.username if user else '未登录' }}</div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </div>
+</section>
+
+<section class="settings-section grid-item">
+    <h2 class="section-title">数据管理</h2>
+    <div class="list-item" data-href="/valuation/trigger" role="link" tabindex="0">
+        <div>
+            <div class="font-semibold">触发估值</div>
+            <div class="text-muted" style="font-size: 0.875rem;">手动触发净值采集和估值计算</div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </div>
+    <div class="list-item" data-href="/export" role="link" tabindex="0">
+        <div>
+            <div class="font-semibold">导出数据</div>
+            <div class="text-muted" style="font-size: 0.875rem;">导出交易和持仓数据</div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </div>
+</section>
+
+<section class="settings-section grid-item">
+    <h2 class="section-title">外观</h2>
+    <div class="list-item">
+        <div>
+            <div class="font-semibold">深色模式</div>
+            <div class="text-muted" style="font-size: 0.875rem;">当前启用</div>
+        </div>
+        <label class="toggle-switch" for="dark-mode-toggle">
+            <input type="checkbox" id="dark-mode-toggle" checked disabled>
+            <span class="toggle-slider"></span>
+            <span class="sr-only">切换深色模式</span>
+        </label>
+    </div>
+</section>
+
+<section class="settings-section grid-item">
+    <h2 class="section-title">关于</h2>
+    <div class="list-item">
+        <div>
+            <div class="font-semibold">版本</div>
+            <div class="text-muted" style="font-size: 0.875rem;">1.0.0</div>
+        </div>
+    </div>
+    <div class="list-item" data-href="https://github.com/RJYAAVNA/gao" role="link" tabindex="0">
+        <div>
+            <div class="font-semibold">GitHub 仓库</div>
+            <div class="text-muted" style="font-size: 0.875rem;">查看源代码</div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+    </div>
+</section>
+
+{% if user %}
+<section class="settings-section grid-item">
+    <button class="btn btn-secondary" style="width: 100%;" onclick="handleLogout()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+        退出登录
+    </button>
+</section>
+{% endif %}
+
+<style>
+.settings-section {
+    margin-bottom: var(--space-lg);
+}
+
+.section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-md);
+}
+
+.settings-section .list-item {
+    margin-bottom: var(--space-xs);
+}
+
+.settings-section .list-item:last-child {
+    margin-bottom: 0;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 28px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--color-muted);
+    border-radius: 999px;
+    transition: background-color 200ms ease;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: var(--color-foreground);
+    border-radius: 50%;
+    transition: transform 200ms ease;
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--color-primary);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+input:focus-visible + .toggle-slider {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+}
+
+input:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+function handleLogout() {
+    if (confirm('确定要退出登录吗？')) {
+        window.location.href = '/auth/logout';
+    }
+}
+</script>
+{% endblock %}

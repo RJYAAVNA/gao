@@ -1,0 +1,459 @@
+{% extends "base/layout.html" %}
+
+{% block title %}收益分析 - 多银行理财台账{% endblock %}
+
+{% block extra_css %}
+<style>
+.chart-container {
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+    border: 1px solid var(--color-border);
+}
+
+.chart-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: var(--space-md);
+    color: var(--color-foreground);
+}
+
+.chart-canvas {
+    width: 100%;
+    height: 300px;
+    min-height: 300px;
+}
+
+@media (min-width: 768px) {
+    .chart-canvas {
+        height: 400px;
+    }
+}
+
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+.stat-item {
+    text-align: center;
+    padding: var(--space-md);
+    background: var(--color-muted);
+    border-radius: 8px;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: var(--space-xs);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground);
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    min-height: 36px;
+}
+
+.chart-controls button:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>收益分析</h1>
+    <p class="text-muted">可视化查看您的投资收益趋势</p>
+</div>
+
+<!-- Net Value Trend Chart -->
+<div class="chart-container grid-item">
+    <h2 class="chart-title">净值走势</h2>
+    <div id="navChart" class="chart-canvas" role="img" aria-label="净值走势图表，显示最近30天的资产净值变化趋势" tabindex="0"></div>
+    <div class="chart-controls" style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); justify-content: center;">
+        <button class="btn btn-secondary btn-sm" onclick="resetNavChart()" aria-label="重置净值图表视图">
+            重置视图
+        </button>
+    </div>
+</div>
+
+<!-- Position Distribution Chart -->
+<div class="chart-container grid-item">
+    <h2 class="chart-title">持仓分布</h2>
+    <div id="distributionChart" class="chart-canvas" role="img" aria-label="持仓分布饼图，显示各产品市值占比" tabindex="0"></div>
+</div>
+
+<!-- Return Comparison Chart -->
+<div class="chart-container grid-item">
+    <h2 class="chart-title">收益对比</h2>
+    <div id="returnChart" class="chart-canvas" role="img" aria-label="收益对比柱状图，显示各产品收益率对比" tabindex="0"></div>
+</div>
+
+<!-- Stats Summary -->
+<div class="stats-row grid-item">
+    <div class="stat-item">
+        <div class="stat-label">最高收益率</div>
+        <div class="stat-value text-success">+{{ ((stats.max_return|default(0)) * 100)|round(2) }}%</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">平均收益率</div>
+        <div class="stat-value">{{ ((stats.avg_return|default(0)) * 100)|round(2) }}%</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">持仓天数</div>
+        <div class="stat-value">{{ stats.total_days|default(0) }}</div>
+    </div>
+    <div class="stat-item">
+        <div class="stat-label">累计交易</div>
+        <div class="stat-value">{{ stats.total_transactions|default(0) }}</div>
+    </div>
+</div>
+
+<!-- Accessible Data Tables (hidden by default, shown to screen readers) -->
+<div class="sr-only">
+    <h3>净值走势数据表</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>净值（元）</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(nav_data.dates|length) %}
+            <tr>
+                <td>{{ nav_data.dates[i]|default('') }}</td>
+                <td>{{ (nav_data.values[i]|default(0))|round(2) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>持仓分布数据</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>产品名称</th>
+                <th>市值（元）</th>
+                <th>占比</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set total = distribution_data|sum(attribute='value')|default(0) %}
+            {% for item in distribution_data %}
+            <tr>
+                <td>{{ item.name|default('') }}</td>
+                <td>{{ (item.value|default(0))|round(2) }}</td>
+                <td>{{ (((item.value|default(0)) / total * 100) if total > 0 else 0)|round(1) }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3>收益对比数据</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>产品</th>
+                <th>收益率</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(return_data.products|length) %}
+            <tr>
+                <td>{{ return_data.products[i]|default('') }}</td>
+                <td>{% if (return_data.returns[i]|default(0)) >= 0 %}+{% endif %}{{ (return_data.returns[i]|default(0))|round(2) }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+// Chart data from backend
+const navData = {{ nav_data|tojson }};
+const distributionData = {{ distribution_data|tojson }};
+const returnData = {{ return_data|tojson }};
+
+// ECharts theme colors
+const colors = {
+    primary: '#F59E0B',
+    secondary: '#FBBF24',
+    accent: '#8B5CF6',
+    success: '#10B981',
+    danger: '#EF4444',
+    text: '#F8FAFC',
+    textMuted: '#94A3B8',
+    background: '#222735',
+    border: '#334155'
+};
+
+// Common chart options
+const commonOptions = {
+    backgroundColor: 'transparent',
+    textStyle: {
+        color: colors.text,
+        fontFamily: 'IBM Plex Sans, sans-serif'
+    },
+    grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '10%',
+        containLabel: true
+    }
+};
+
+// Initialize charts after DOM loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Net Value Trend Chart
+    const navChart = echarts.init(document.getElementById('navChart'));
+    const navChartOption = {
+        ...commonOptions,
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+            textStyle: { color: colors.text },
+            formatter: (params) => {
+                const date = params[0].axisValue;
+                const value = params[0].data;
+                return `${date}<br/>净值: ¥${formatCurrency(value, 2)}`;
+            }
+        },
+        xAxis: {
+            type: 'category',
+            data: navData.dates,
+            axisLine: { lineStyle: { color: colors.border } },
+            axisLabel: { color: colors.textMuted }
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: { lineStyle: { color: colors.border } },
+            axisLabel: {
+                color: colors.textMuted,
+                formatter: (value) => '¥' + formatCurrency(value, 0)
+            },
+            splitLine: { lineStyle: { color: colors.border, opacity: 0.2 } }
+        },
+        series: [{
+            name: '净值',
+            type: 'line',
+            data: navData.values,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: {
+                color: colors.primary,
+                width: 3
+            },
+            itemStyle: {
+                color: colors.primary,
+                borderColor: colors.primary,
+                borderWidth: 2
+            },
+            areaStyle: {
+                color: {
+                    type: 'linear',
+                    x: 0, y: 0, x2: 0, y2: 1,
+                    colorStops: [
+                        { offset: 0, color: 'rgba(245, 158, 11, 0.3)' },
+                        { offset: 1, color: 'rgba(245, 158, 11, 0)' }
+                    ]
+                }
+            }
+        }],
+        dataZoom: [
+            {
+                type: 'inside',
+                start: 0,
+                end: 100
+            }
+        ]
+    };
+    navChart.setOption(navChartOption);
+
+    // Reset chart function
+    window.resetNavChart = () => {
+        navChart.dispatchAction({
+            type: 'dataZoom',
+            start: 0,
+            end: 100
+        });
+    };
+
+    // Keyboard navigation for nav chart
+    const navChartEl = document.getElementById('navChart');
+    navChartEl.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            const currentOption = navChart.getOption();
+            const dataZoom = currentOption.dataZoom[0];
+            const step = 5;
+
+            if (e.key === 'ArrowLeft') {
+                navChart.dispatchAction({
+                    type: 'dataZoom',
+                    start: Math.max(0, dataZoom.start - step),
+                    end: Math.max(step, dataZoom.end - step)
+                });
+            } else {
+                navChart.dispatchAction({
+                    type: 'dataZoom',
+                    start: Math.min(100 - step, dataZoom.start + step),
+                    end: Math.min(100, dataZoom.end + step)
+                });
+            }
+        } else if (e.key === 'r' || e.key === 'R') {
+            e.preventDefault();
+            resetNavChart();
+        }
+    });
+
+    // Position Distribution Chart (Pie)
+    const distributionChart = echarts.init(document.getElementById('distributionChart'));
+    distributionChart.setOption({
+        ...commonOptions,
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+            textStyle: { color: colors.text },
+            formatter: (params) => {
+                return `${params.name}<br/>¥${formatCurrency(params.value, 2)} (${params.percent}%)`;
+            }
+        },
+        legend: {
+            orient: 'horizontal',
+            bottom: '0%',
+            textStyle: { color: colors.text },
+            itemGap: 16
+        },
+        series: [{
+            name: '持仓分布',
+            type: 'pie',
+            radius: ['40%', '70%'],
+            avoidLabelOverlap: true,
+            label: {
+                show: true,
+                formatter: '{b}\n{d}%',
+                color: colors.text,
+                fontSize: 12
+            },
+            labelLine: {
+                show: true,
+                lineStyle: { color: colors.border }
+            },
+            data: distributionData,
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowOffsetX: 0,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                },
+                label: {
+                    fontSize: 14,
+                    fontWeight: 'bold'
+                }
+            },
+            itemStyle: {
+                borderColor: colors.background,
+                borderWidth: 2
+            }
+        }]
+    });
+
+    // Return Comparison Chart (Bar)
+    const returnChart = echarts.init(document.getElementById('returnChart'));
+    returnChart.setOption({
+        ...commonOptions,
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: colors.background,
+            borderColor: colors.border,
+            textStyle: { color: colors.text },
+            formatter: (params) => {
+                const name = params[0].axisValue;
+                const value = params[0].data;
+                const sign = value >= 0 ? '+' : '';
+                return `${name}<br/>收益率: ${sign}${value.toFixed(2)}%`;
+            }
+        },
+        xAxis: {
+            type: 'category',
+            data: returnData.products,
+            axisLine: { lineStyle: { color: colors.border } },
+            axisLabel: {
+                color: colors.textMuted,
+                rotate: 0,
+                interval: 0,
+                fontSize: 12
+            }
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: { lineStyle: { color: colors.border } },
+            axisLabel: {
+                color: colors.textMuted,
+                formatter: '{value}%'
+            },
+            splitLine: { lineStyle: { color: colors.border, opacity: 0.2 } }
+        },
+        series: [{
+            name: '收益率',
+            type: 'bar',
+            data: returnData.returns,
+            itemStyle: {
+                color: (params) => {
+                    return params.data >= 0 ? colors.success : colors.danger;
+                },
+                borderRadius: [4, 4, 0, 0]
+            },
+            barMaxWidth: 40,
+            label: {
+                show: true,
+                position: 'top',
+                formatter: (params) => {
+                    const sign = params.data >= 0 ? '+' : '';
+                    return `${sign}${params.data.toFixed(1)}%`;
+                },
+                color: colors.text,
+                fontSize: 11
+            },
+            emphasis: {
+                itemStyle: {
+                    shadowBlur: 10,
+                    shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+            }
+        }]
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        navChart.resize();
+        distributionChart.resize();
+        returnChart.resize();
+    });
+
+    // Respect reduced motion preference
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        navChart.setOption({ animation: false });
+        distributionChart.setOption({ animation: false });
+        returnChart.setOption({ animation: false });
+    }
+});
+</script>
+{% endblock %}

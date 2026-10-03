@@ -1,0 +1,38 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0F172A" rx="96"/>
+
+  <!-- Gold accent circle -->
+  <circle cx="256" cy="256" r="180" fill="#F59E0B" opacity="0.2"/>
+
+  <!-- Chart icon -->
+  <g transform="translate(256, 256)">
+    <!-- Bar 1 -->
+    <rect x="-120" y="20" width="50" height="100" fill="#F59E0B" rx="8"/>
+    <!-- Bar 2 -->
+    <rect x="-50" y="-20" width="50" height="140" fill="#FBBF24" rx="8"/>
+    <!-- Bar 3 -->
+    <rect x="20" y="-60" width="50" height="180" fill="#F59E0B" rx="8"/>
+
+    <!-- Trend line -->
+    <path d="M -95,-30 L -25,-60 L 45,-90"
+          stroke="#8B5CF6"
+          stroke-width="8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"/>
+
+    <!-- Trend dots -->
+    <circle cx="-95" cy="-30" r="10" fill="#8B5CF6"/>
+    <circle cx="-25" cy="-60" r="10" fill="#8B5CF6"/>
+    <circle cx="45" cy="-90" r="10" fill="#8B5CF6"/>
+  </g>
+
+  <!-- Currency symbol -->
+  <text x="256" y="420"
+        font-family="'IBM Plex Sans', sans-serif"
+        font-size="80"
+        font-weight="700"
+        fill="#F59E0B"
+        text-anchor="middle">¥</text>
+</svg>

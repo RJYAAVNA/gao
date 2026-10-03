@@ -52,8 +52,10 @@ def create_app(settings: Settings | None = None) -> Flask:
 def _register_blueprints(app: Flask) -> None:
     """注册蓝图。"""
     from ledger.api.valuation import bp as valuation_bp
+    from ledger.routes import bp as main_bp
 
     app.register_blueprint(valuation_bp)
+    app.register_blueprint(main_bp)
 
 
 def _register_health_routes(app: Flask) -> None:
@@ -63,9 +65,12 @@ def _register_health_routes(app: Flask) -> None:
     外部银行不可用不应让 Web 失去就绪状态。
     """
 
-    @app.get("/")
-    def index() -> Any:
-        """API 根路径，返回可用端点列表。"""
+    # API 根路径已移除，现在 / 由前端蓝图处理
+    # 如需查看 API 端点列表，访问 /health/live 或 /health/ready
+
+    @app.get("/api")
+    def api_index() -> Any:
+        """API 端点列表（已移至 /api）。"""
         return jsonify(
             {
                 "name": "Ledger API",
@@ -119,3 +124,8 @@ def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(500)
     def server_error(_e: Any) -> Any:
         return jsonify(error="internal_error"), 500
+
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run(host="0.0.0.0", port=5000, debug=True)

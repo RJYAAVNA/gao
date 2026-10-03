@@ -1,0 +1,48 @@
+{% extends "base/layout.html" %}
+
+{% block title %}离线 - 理财台账{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div style="text-align: center; padding: var(--space-2xl) var(--space-md); max-width: 400px; margin: 0 auto;">
+        <!-- Offline Icon -->
+        <svg style="width: 120px; height: 120px; margin: 0 auto var(--space-xl); opacity: 0.5;" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3" />
+        </svg>
+
+        <h1 style="font-size: var(--text-2xl); font-weight: 700; margin-bottom: var(--space-md); color: var(--color-foreground);">
+            网络连接中断
+        </h1>
+
+        <p style="font-size: var(--text-base); color: var(--color-muted-foreground); line-height: 1.6; margin-bottom: var(--space-xl);">
+            无法连接到服务器。请检查您的网络连接并重试。
+        </p>
+
+        <button
+            onclick="window.location.reload()"
+            class="btn btn-primary"
+            style="width: 100%; padding: var(--space-md); font-size: var(--text-base); font-weight: 600;"
+        >
+            重新加载
+        </button>
+
+        <button
+            onclick="window.history.back()"
+            class="btn btn-secondary"
+            style="width: 100%; margin-top: var(--space-md); padding: var(--space-md); font-size: var(--text-base);"
+        >
+            返回上一页
+        </button>
+
+        <!-- Cached Pages Hint -->
+        <div style="margin-top: var(--space-2xl); padding: var(--space-md); background: var(--color-muted); border-radius: 12px; text-align: left;">
+            <h3 style="font-size: var(--text-sm); font-weight: 600; margin-bottom: var(--space-sm); color: var(--color-foreground);">
+                💡 提示
+            </h3>
+            <p style="font-size: var(--text-sm); color: var(--color-muted-foreground); line-height: 1.5;">
+                已缓存的页面仍可访问。您可以尝试导航到之前访问过的页面。
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

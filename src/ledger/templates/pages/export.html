@@ -1,0 +1,254 @@
+{% extends "base/layout.html" %}
+
+{% block title %}{{ title }} - 多银行理财台账{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ title }}</h1>
+</div>
+
+<div class="content-grid">
+    <div class="grid-item info-card">
+        <h2>功能说明</h2>
+        <p class="info-text">{{ message }}</p>
+
+        <div class="feature-list">
+            <h3>计划支持的导出格式：</h3>
+            <ul>
+                <li>Excel (.xlsx) - 包含多个工作表</li>
+                <li>CSV (.csv) - 持仓明细</li>
+                <li>PDF (.pdf) - 报表格式</li>
+                <li>JSON (.json) - 原始数据</li>
+            </ul>
+        </div>
+
+        <div class="export-options">
+            <h3>导出选项：</h3>
+            <label class="checkbox-item">
+                <input type="checkbox" checked disabled>
+                <span>持仓明细</span>
+            </label>
+            <label class="checkbox-item">
+                <input type="checkbox" checked disabled>
+                <span>交易记录</span>
+            </label>
+            <label class="checkbox-item">
+                <input type="checkbox" checked disabled>
+                <span>收益分析</span>
+            </label>
+            <label class="checkbox-item">
+                <input type="checkbox" disabled>
+                <span>历史估值</span>
+            </label>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" disabled>导出 Excel（开发中）</button>
+            <button class="btn btn-secondary-btn" disabled>导出 CSV（开发中）</button>
+            <a href="/settings" class="btn btn-back">返回设置</a>
+        </div>
+    </div>
+
+    <div class="grid-item preview-card">
+        <h2>导出预览</h2>
+        <div class="preview-info">
+            <p>导出的数据将包含以下内容：</p>
+
+            <div class="preview-section">
+                <h4>📊 持仓明细</h4>
+                <ul>
+                    <li>产品名称、代码</li>
+                    <li>持仓数量、成本</li>
+                    <li>当前市值、收益</li>
+                    <li>收益率、持有天数</li>
+                </ul>
+            </div>
+
+            <div class="preview-section">
+                <h4>💰 交易记录</h4>
+                <ul>
+                    <li>交易日期、类型</li>
+                    <li>交易金额、数量</li>
+                    <li>交易账户、备注</li>
+                </ul>
+            </div>
+
+            <div class="preview-section">
+                <h4>📈 收益分析</h4>
+                <ul>
+                    <li>总资产、总收益</li>
+                    <li>收益率趋势</li>
+                    <li>持仓分布</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.info-card, .preview-card {
+    background: var(--surface-2);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.info-text {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
+}
+
+.feature-list {
+    margin: var(--space-lg) 0;
+}
+
+.feature-list h3,
+.export-options h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-md);
+    color: var(--text-primary);
+}
+
+.feature-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-list li {
+    padding: var(--space-sm) 0;
+    padding-left: var(--space-md);
+    position: relative;
+    color: var(--text-secondary);
+}
+
+.feature-list li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent-primary);
+}
+
+.export-options {
+    margin: var(--space-lg) 0;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: var(--space-sm) 0;
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+
+.checkbox-item input {
+    margin-right: var(--space-sm);
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-pill);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    border: none;
+}
+
+.btn-primary {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-secondary-btn {
+    background: var(--surface-3);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary-btn:hover:not(:disabled) {
+    background: var(--surface-4);
+}
+
+.btn-secondary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-back {
+    background: var(--surface-3);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-back:hover {
+    background: var(--surface-4);
+}
+
+.preview-info {
+    color: var(--text-secondary);
+}
+
+.preview-section {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--surface-3);
+    border-radius: var(--radius-md);
+}
+
+.preview-section h4 {
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+    font-size: 0.95rem;
+}
+
+.preview-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.preview-section li {
+    padding: var(--space-xs) 0;
+    padding-left: var(--space-md);
+    position: relative;
+    font-size: 0.9rem;
+}
+
+.preview-section li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--accent-primary);
+}
+
+@media (max-width: 768px) {
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
