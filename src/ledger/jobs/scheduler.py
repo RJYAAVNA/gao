@@ -110,3 +110,47 @@ class Scheduler:
             db.commit()
 
         logger.info(f"产品 {product_id} 同步任务生成完成，新增 {created_count} 个任务")
+
+
+def main() -> None:
+    """调度器主入口。"""
+    import os
+    import signal
+
+    from apscheduler.schedulers.blocking import BlockingScheduler
+    from apscheduler.triggers.cron import CronTrigger
+
+    # 检查是否启用调度器
+    if os.getenv("SCHEDULER_ENABLED", "").lower() not in ("true", "1", "yes"):
+        logger.warning("调度器未启用，退出")
+        return
+
+    logger.info("启动调度器")
+    scheduler = Scheduler()
+    aps = BlockingScheduler(timezone="Asia/Shanghai")
+
+    # 每天凌晨 3 点生成同步任务
+    aps.add_job(
+        scheduler.schedule_daily_sync,
+        trigger=CronTrigger(hour=3, minute=0),
+        id="daily_sync",
+        name="每日净值同步",
+    )
+
+    logger.info("调度任务已注册")
+
+    def shutdown(signum: int, frame: object) -> None:
+        logger.info(f"收到信号 {signum}，准备停止调度器")
+        aps.shutdown(wait=False)
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+
+    try:
+        aps.start()
+    except (KeyboardInterrupt, SystemExit):
+        logger.info("调度器已停止")
+
+
+if __name__ == "__main__":
+    main()

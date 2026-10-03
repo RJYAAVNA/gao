@@ -57,6 +57,14 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+ledger = [
+    "templates/**/*.html",
+    "templates/**/*.css",
+    "templates/**/*.js",
+    "static/**/*",
+]
+
 # ---------------------------------------------------------------- 工具配置
 [tool.ruff]
 line-length = 100

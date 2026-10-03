@@ -301,3 +301,28 @@ class Worker:
             "server_error": 120,
         }
         return backoff_map.get(error_type, 60)
+
+
+def main() -> None:
+    """Worker 主入口。"""
+    import os
+    import signal
+
+    artifacts_dir = os.getenv("ARTIFACT_STORAGE_PATH", "data/artifacts")
+    worker = Worker(artifacts_dir=artifacts_dir)
+
+    def shutdown(signum: int, frame: object) -> None:
+        logger.info(f"收到信号 {signum}，准备停止 worker")
+        worker.running = False
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+
+    try:
+        asyncio.run(worker.run())
+    except KeyboardInterrupt:
+        logger.info("Worker 已停止")
+
+
+if __name__ == "__main__":
+    main()
