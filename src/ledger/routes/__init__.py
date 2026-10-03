@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from flask import Blueprint, current_app, jsonify, redirect, render_template, request, send_from_directory, url_for
+from sqlalchemy.orm import joinedload
 
 from ledger.auth import get_current_user_id
 from ledger.auth.session import clear_current_user, set_current_user
@@ -100,8 +101,13 @@ def position_detail(position_id: str) -> str | Any:
         return redirect(url_for("main.login"))
 
     with get_session() as db:
-        # 获取持仓信息
-        position = db.query(Position).filter(Position.id == position_id, Position.user_id == user_id).first()
+        # 获取持仓信息，预加载关联的 product
+        position = (
+            db.query(Position)
+            .options(joinedload(Position.product))
+            .filter(Position.id == position_id, Position.user_id == user_id)
+            .first()
+        )
 
         if not position:
             return jsonify({"error": "not_found"}), 404
