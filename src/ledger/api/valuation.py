@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date as Date, datetime
+from datetime import date, datetime
 from typing import Any
 
 from flask import Blueprint, g, jsonify, request
@@ -25,12 +25,12 @@ bp = Blueprint("valuation", __name__, url_prefix="/api/valuation")
 class TriggerValuationRequest(BaseModel):
     """触发估值请求。"""
 
-    from_date: Date = Field(..., description="起始日期")
-    to_date: Date = Field(..., description="结束日期")
+    from_date: date = Field(..., description="起始日期")
+    to_date: date = Field(..., description="结束日期")
 
     @field_validator("to_date")
     @classmethod
-    def validate_date_range(cls, v: Date, info: Any) -> Date:
+    def validate_date_range(cls, v: date, info: Any) -> date:
         """验证日期范围。"""
         from_date = info.data.get("from_date")
         if from_date and v < from_date:
@@ -43,8 +43,8 @@ class ValuationRunResponse(BaseModel):
 
     id: uuid.UUID
     user_id: uuid.UUID
-    from_date: Date
-    to_date: Date
+    from_date: date
+    to_date: date
     status: str
     formula_version: str
     input_version: str
@@ -60,13 +60,13 @@ class PositionSnapshotResponse(BaseModel):
     id: uuid.UUID
     account_id: uuid.UUID
     product_id: uuid.UUID
-    date: Date
+    date: date
     shares: str  # Decimal 转为字符串
     cost: str
     market_value: str | None
     unrealized_pnl: str | None
     realized_pnl_cumulative: str
-    nav_date: Date | None
+    nav_date: date | None
     quality: str
 
 
@@ -74,7 +74,7 @@ class PortfolioSnapshotResponse(BaseModel):
     """组合快照响应。"""
 
     id: uuid.UUID
-    date: Date
+    date: date
     currency: str
     market_value: str | None
     total_cost: str
@@ -256,11 +256,11 @@ def get_portfolio_snapshots() -> tuple[Any, int]:
         ]
 
         if from_date_str:
-            from_date = Date.fromisoformat(from_date_str)
+            from_date = date.fromisoformat(from_date_str)
             conditions.append(PortfolioSnapshot.date >= from_date)
 
         if to_date_str:
-            to_date = Date.fromisoformat(to_date_str)
+            to_date = date.fromisoformat(to_date_str)
             conditions.append(PortfolioSnapshot.date <= to_date)
 
         # 查询快照
@@ -305,7 +305,7 @@ def get_position_snapshots() -> tuple[Any, int]:
     if not date_str:
         return jsonify({"error": "date parameter is required"}), 400
 
-    snapshot_date = Date.fromisoformat(date_str)
+    snapshot_date = date.fromisoformat(date_str)
 
     with session_scope() as session:
         # 确定使用哪个 run

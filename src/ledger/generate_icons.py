@@ -4,9 +4,10 @@
 使用 Pillow 库生成不同尺寸的应用图标
 """
 
-from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
 import sys
+from pathlib import Path
+
+from PIL import Image, ImageDraw
 
 
 def create_icon(size: int, output_path: Path, maskable: bool = False) -> None:

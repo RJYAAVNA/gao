@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import date as Date
+from datetime import date
 from decimal import Decimal
 
 from ledger.db.models.market_data import MetricType
@@ -27,7 +27,7 @@ class NavData:
 
     observation_id: uuid.UUID
     product_id: uuid.UUID
-    valuation_date: Date
+    valuation_date: date
     metric_type: MetricType
     value: Decimal
 
@@ -38,14 +38,14 @@ class PositionValuation:
 
     account_id: uuid.UUID
     product_id: uuid.UUID
-    date: Date
+    date: date
     shares: Decimal
     cost: Decimal
     market_value: Decimal | None
     unrealized_pnl: Decimal | None
     realized_pnl_cumulative: Decimal
     nav_observation_id: uuid.UUID | None
-    nav_date: Date | None
+    nav_date: date | None
     nav_value: Decimal | None
     quality: Completeness
 
@@ -62,7 +62,7 @@ class PortfolioValuation:
     """组合整体估值结果。"""
 
     user_id: uuid.UUID
-    date: Date
+    date: date
     currency: str
     market_value: Decimal | None
     total_cost: Decimal
@@ -77,7 +77,7 @@ class PortfolioValuation:
 
 def calculate_position_valuation(
     position: PositionState,
-    valuation_date: Date,
+    valuation_date: date,
     nav_data: NavData | None,
 ) -> PositionValuation:
     """计算单个持仓的估值。
@@ -132,7 +132,7 @@ def calculate_position_valuation(
 
 def calculate_portfolio_valuation(
     user_id: uuid.UUID,
-    date: Date,
+    date: date,
     position_valuations: list[PositionValuation],
     currency: str = "CNY",
 ) -> PortfolioValuation:
@@ -250,8 +250,8 @@ def calculate_return_on_cost(unrealized_pnl: Decimal, remaining_cost: Decimal) -
 def calculate_nav_annualized_return(
     nav_start: Decimal,
     nav_end: Decimal,
-    start_date: Date,
-    end_date: Date,
+    start_date: date,
+    end_date: date,
 ) -> Decimal | None:
     """计算净值区间年化收益率。
 

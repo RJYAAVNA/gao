@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import date as Date
+from datetime import date
 from decimal import Decimal
 
 from ledger.db.models.portfolio import Transaction, TransactionType
@@ -38,7 +38,7 @@ class PositionState:
     total_dividends: Decimal = Decimal("0")
     # 累计独立费用
     total_fees: Decimal = Decimal("0")
-    last_transaction_date: Date | None = None
+    last_transaction_date: date | None = None
 
     def apply_transaction(self, txn: Transaction) -> None:
         """应用单笔交易到当前状态。"""
@@ -136,7 +136,7 @@ def replay_transactions(
 def replay_to_date(
     user_id: uuid.UUID,
     transactions: list[Transaction],
-    target_date: Date,
+    target_date: date,
 ) -> PortfolioState:
     """重放到指定日期的持仓状态。
 
@@ -160,9 +160,9 @@ def replay_to_date(
 def replay_daily_snapshots(
     user_id: uuid.UUID,
     transactions: list[Transaction],
-    from_date: Date,
-    to_date: Date,
-) -> dict[Date, PortfolioState]:
+    from_date: date,
+    to_date: date,
+) -> dict[date, PortfolioState]:
     """生成日期区间内每日的持仓快照。
 
     Args:
@@ -174,7 +174,7 @@ def replay_daily_snapshots(
     Returns:
         日期 -> 持仓状态的字典
     """
-    snapshots: dict[Date, PortfolioState] = {}
+    snapshots: dict[date, PortfolioState] = {}
     portfolio = PortfolioState(user_id=user_id)
 
     # 重放到起始日期前一天
