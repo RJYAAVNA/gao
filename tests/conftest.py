@@ -17,6 +17,7 @@ os.environ.setdefault("SESSION_COOKIE_SECURE", "false")
 
 from flask import Flask
 from flask.testing import FlaskClient
+from sqlalchemy.orm import Session
 
 from ledger.app import create_app
 from ledger.config import Settings, get_settings
@@ -38,3 +39,13 @@ def app(settings: Settings) -> Iterator[Flask]:
 @pytest.fixture
 def client(app: Flask) -> FlaskClient:
     return app.test_client()
+
+
+@pytest.fixture
+def db_session(app: Flask) -> Iterator[Session]:
+    """提供一个干净的数据库会话，测试结束后回滚所有更改。"""
+    from ledger.db.session import get_session
+
+    with get_session() as session:
+        yield session
+        session.rollback()

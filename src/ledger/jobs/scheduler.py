@@ -1,83 +1,112 @@
-"""独立调度进程入口：python -m ledger.jobs.scheduler
-
-职责只有一个：按配置把到期的周期任务写入 jobs 表。不执行采集。
-即使短时间内有两个 scheduler 实例，也依靠 jobs.dedupe_key 唯一约束去重。
-
-S1 阶段只搭好骨架与优雅停机；实际的任务生成逻辑在 S3 实现。
-"""
+"""Scheduler：定期生成任务。"""
 
 from __future__ import annotations
 
-import signal
-import sys
-import threading
-from types import FrameType
+import logging
+from datetime import UTC, datetime
 
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import select
 
-from ledger.config import get_settings
-from ledger.logging_setup import configure_logging, get_logger
+from ledger.db.models.catalog import ProductSourceMapping
+from ledger.db.models.jobs import JobType
+from ledger.db.session import get_session_context
+from ledger.jobs.queue import enqueue_job
 
-log = get_logger(__name__)
-_shutdown = threading.Event()
+logger = logging.getLogger(__name__)
 
 
-def enqueue_due_jobs() -> None:
-    """生成到期任务。
+class Scheduler:
+    """任务调度器。"""
 
-    S3 将在此实现：按数据源时区与公布规律，为活跃持仓/关注产品生成
-    sync_product_nav 任务，并用 schedule_watermarks 补发停机期间漏掉的周期。
-    """
-    log.info("scheduler_tick", note="任务生成逻辑待 S3 实现")
+    def __init__(self) -> None:
+        self.running = False
 
+    def schedule_daily_sync(self) -> None:
+        """为所有启用的产品-数据源映射生成同步任务。"""
+        logger.info("开始生成每日同步任务")
 
-def _handle_signal(signum: int, _frame: FrameType | None) -> None:
-    log.info("scheduler_shutdown_signal", signal=signum)
-    _shutdown.set()
+        with get_session_context() as db:
+            # 查找所有启用的映射
+            stmt = (
+                select(ProductSourceMapping)
+                .where(ProductSourceMapping.enabled == True)  # noqa: E712
+                .join(ProductSourceMapping.source)
+                .where(ProductSourceMapping.source.has(enabled=True))
+            )
+            mappings = db.execute(stmt).scalars().all()
 
+            created_count = 0
+            for mapping in mappings:
+                dedupe_key = (
+                    f"sync_nav:{mapping.product_id}:{mapping.source_id}:"
+                    f"{datetime.now(UTC).date()}"
+                )
 
-def main() -> int:
-    settings = get_settings()
-    configure_logging(settings.log_level, settings.app_env)
+                job = enqueue_job(
+                    db,
+                    job_type=JobType.SYNC_PRODUCT_NAV,
+                    dedupe_key=dedupe_key,
+                    payload={
+                        "source_id": str(mapping.source_id),
+                        "product_id": str(mapping.product_id),
+                        "source_product_id": mapping.source_product_id,
+                    },
+                    priority=5,  # 默认优先级
+                    source_id=mapping.source_id,
+                    product_id=mapping.product_id,
+                )
 
-    if not settings.scheduler_enabled:
-        log.warning("scheduler_disabled", note="SCHEDULER_ENABLED=false，进程退出")
-        return 0
+                if job.attempt_count == 0:
+                    created_count += 1
 
-    scheduler = BlockingScheduler(timezone=settings.business_timezone)
+            db.commit()
 
-    # 主采集窗口：22:05。这是产品默认值，不保证各银行此时已发布净值；
-    # 每个来源的实际公布日历在 data_sources.config 中单独配置。
-    scheduler.add_job(
-        enqueue_due_jobs,
-        CronTrigger(hour=22, minute=5),
-        id="nightly_enqueue",
-        max_instances=1,
-        coalesce=True,
-    )
-    # 次日上午补偿窗口
-    scheduler.add_job(
-        enqueue_due_jobs,
-        CronTrigger(hour=9, minute=30),
-        id="morning_catchup",
-        max_instances=1,
-        coalesce=True,
-    )
+        logger.info(f"每日同步任务生成完成，新增 {created_count} 个任务")
 
-    signal.signal(signal.SIGTERM, _handle_signal)
-    signal.signal(signal.SIGINT, _handle_signal)
+    def schedule_single_product(self, product_id: str) -> None:
+        """为单个产品的所有数据源生成同步任务。
 
-    log.info("scheduler_started", timezone=settings.business_timezone)
-    try:
-        scheduler.start()
-    except (KeyboardInterrupt, SystemExit):
-        pass
-    finally:
-        scheduler.shutdown(wait=True)
-        log.info("scheduler_stopped")
-    return 0
+        Args:
+            product_id: 产品 UUID
+        """
+        logger.info(f"为产品 {product_id} 生成同步任务")
 
+        with get_session_context() as db:
+            stmt = (
+                select(ProductSourceMapping)
+                .where(
+                    ProductSourceMapping.product_id == product_id,
+                    ProductSourceMapping.enabled == True,  # noqa: E712
+                )
+                .join(ProductSourceMapping.source)
+                .where(ProductSourceMapping.source.has(enabled=True))
+            )
+            mappings = db.execute(stmt).scalars().all()
 
-if __name__ == "__main__":
-    sys.exit(main())
+            created_count = 0
+            for mapping in mappings:
+                dedupe_key = (
+                    f"sync_nav:{mapping.product_id}:{mapping.source_id}:"
+                    f"{datetime.now(UTC).date()}"
+                )
+
+                job = enqueue_job(
+                    db,
+                    job_type=JobType.SYNC_PRODUCT_NAV,
+                    dedupe_key=dedupe_key,
+                    payload={
+                        "source_id": str(mapping.source_id),
+                        "product_id": str(mapping.product_id),
+                        "source_product_id": mapping.source_product_id,
+                    },
+                    priority=5,  # 默认优先级
+                    source_id=mapping.source_id,
+                    product_id=mapping.product_id,
+                )
+
+                if job.attempt_count == 0:
+                    created_count += 1
+
+            db.commit()
+
+        logger.info(f"产品 {product_id} 同步任务生成完成，新增 {created_count} 个任务")

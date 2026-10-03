@@ -165,13 +165,82 @@ legacy/              旧版单文件应用（不入库，仅本地参考）
 
 - 普通用户提交的手工净值只是候选，需管理员审核才影响公共行情。
 
-  ## 开发阶段规划
+## 开发阶段规划
 
-  | 阶段 | 内容                                                         | 找你确认什么                     |
-  | ---- | ------------------------------------------------------------ | -------------------------------- |
-  | S1   | GitHub 建仓（清理种子数据和凭据）、项目骨架、Docker Compose、PostgreSQL schema + Alembic 迁移 | 仓库建好后给你看目录结构和表设计 |
-  | S2   | 注册登录（邮箱验证+限流）、多用户隔离、账户/产品/交易/持仓 CRUD | 跑起来给你试用，确认交互         |
-  | S3   | 采集层：中银适配器 + 中国理财网适配器 + 任务队列 + 证据存储  | 给你看真实采集结果和数据准确性   |
-  | S4   | 收益计算（流水重放、日快照、周/月/自定义区间）+ 完整性标记   | 用你的真实数据对账               |
-  | S5   | 手机端页面 + PWA + ECharts 图表                              | 你在手机上实际用                 |
-  | S6   | 阿里云部署 + HTTPS + 备份 + 监控                             | 上线前确认安全配置               |
+| 阶段 | 状态 | 内容 |
+| ---- | ---- | ---- |
+| S1 | ✓ 已完成 | GitHub 建仓、项目骨架、Docker Compose、PostgreSQL schema + Alembic 迁移 |
+| S2 | ✓ 已完成 | 用户认证、多用户隔离、账户/产品/交易/持仓 CRUD（邮箱验证暂不实现） |
+| S3 | 待开始 | 采集层：中银适配器 + 中国理财网适配器 + 任务队列 + 证据存储 |
+| S4 | 待开始 | 收益计算（流水重放、日快照、周/月/自定义区间）+ 完整性标记 |
+| S5 | 待开始 | 手机端页面 + PWA + ECharts 图表 |
+| S6 | 待开始 | 阿里云部署 + HTTPS + 备份 + 监控 |
+
+### S2 使用说明
+
+**创建测试数据:**
+
+```bash
+# 创建管理员、普通用户、机构和产品
+uv run python scripts/seed_test_data.py
+```
+
+**登录信息:**
+- 管理员: `admin@example.com` / `admin123`
+- 用户1: `user1@example.com` / `user123`
+- 用户2: `user2@example.com` / `user123`
+
+**API 端点:**
+- `POST /api/auth/register` - 注册用户
+- `POST /api/auth/login` - 登录
+- `POST /api/auth/logout` - 登出
+- `GET /api/accounts` - 列出账户
+- `POST /api/accounts` - 创建账户
+- `GET /api/transactions` - 列出交易
+- `POST /api/transactions` - 创建交易
+- `GET /api/positions` - 列出持仓
+- `GET /api/catalog/institutions` - 列出机构
+- `POST /api/catalog/institutions` - 创建机构（仅管理员）
+- `GET /api/catalog/products` - 列出产品
+- `POST /api/catalog/products` - 创建产品（仅管理员）
+
+### S3：数据源与净值采集
+
+**目标**：配置数据源，建立产品与数据源的映射，实现净值自动采集。
+
+**功能**：
+
+1. **数据源管理**：
+   - 注册采集器（中银理财、银行理财）
+   - 配置源启用状态和采集参数
+   - 查看原始证据与采集日志
+
+2. **产品映射**：
+   - 建立产品与数据源的关联
+   - 支持一个产品对应多个数据源
+
+3. **任务系统**：
+   - 定时生成净值同步任务
+   - Worker 进程异步执行采集
+   - 自动去重与幂等处理
+
+**API 端点**：
+
+- `GET /api/catalog/sources` - 列出数据源
+- `POST /api/catalog/sources` - 创建数据源（仅管理员）
+- `PATCH /api/catalog/sources/:id` - 更新数据源（仅管理员）
+- `GET /api/catalog/products/:id/sources` - 列出产品的数据源映射
+- `POST /api/catalog/products/:id/sources` - 创建产品与源的映射（仅管理员）
+- `DELETE /api/catalog/products/:id/sources/:source_id` - 删除映射（仅管理员）
+- `GET /api/jobs` - 列出任务（仅管理员）
+- `POST /api/jobs/trigger-nav-sync` - 手动触发净值同步（仅管理员）
+
+**后台进程**：
+
+```bash
+# 启动 worker 进程
+uv run python -m ledger.jobs.worker
+
+# 启动 scheduler（定时生成任务）
+uv run python -m ledger.jobs.scheduler
+```
