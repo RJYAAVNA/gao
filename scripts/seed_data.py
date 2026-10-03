@@ -270,48 +270,53 @@ def seed_all() -> None:
 
         # 7. 创建交易记录
         print("\n📝 创建交易记录...")
+        from ledger.portfolio.transaction_service import create_transaction
+
         transaction_data = [
             {
                 "product": products[0],
                 "type": TransactionType.BUY,
                 "effective_date": base_date,
-                "cash_amount": Decimal("-10000.00"),
+                "cash_amount": Decimal("10000.00"),
                 "shares_delta": Decimal("10000.00"),
             },
             {
                 "product": products[1],
                 "type": TransactionType.BUY,
                 "effective_date": base_date + timedelta(days=5),
-                "cash_amount": Decimal("-20000.00"),
+                "cash_amount": Decimal("20000.00"),
                 "shares_delta": Decimal("19950.25"),
             },
             {
                 "product": products[2],
                 "type": TransactionType.BUY,
                 "effective_date": base_date + timedelta(days=10),
-                "cash_amount": Decimal("-15000.00"),
+                "cash_amount": Decimal("15000.00"),
                 "shares_delta": Decimal("14925.37"),
             },
         ]
 
         for td in transaction_data:
-            transaction = Transaction(
-                user_id=user.id,
-                account_id=account.id,
-                product_id=td["product"].id,
-                type=td["type"],
-                effective_date=td["effective_date"],
-                cash_amount=td["cash_amount"],
-                shares_delta=td["shares_delta"],
-                fee=Decimal("0"),
-            )
-            db.add(transaction)
-            print(
-                f"✓ 创建交易: {td['product'].issuer_code} "
-                f"{td['type'].value} {abs(td['cash_amount'])} 元"
-            )
-
-        db.commit()
+            try:
+                transaction = create_transaction(
+                    db,
+                    user_id=user.id,
+                    account_id=account.id,
+                    product_id=td["product"].id,
+                    txn_type=td["type"],
+                    effective_date=td["effective_date"],
+                    cash_amount=td["cash_amount"],
+                    shares_delta=td["shares_delta"],
+                    fee=Decimal("0"),
+                )
+                db.commit()
+                print(
+                    f"✓ 创建交易: {td['product'].issuer_code} "
+                    f"{td['type'].value} {td['cash_amount']} 元"
+                )
+            except Exception as e:
+                print(f"交易可能已存在: {e}")
+                db.rollback()
 
     print("\n✅ 测试数据初始化完成！")
     print("\n登录信息:")

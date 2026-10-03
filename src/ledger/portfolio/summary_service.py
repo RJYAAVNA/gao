@@ -206,7 +206,7 @@ def get_top_positions(
                 id=snapshot.id,
                 account_id=snapshot.account_id,
                 product_id=snapshot.product_id,
-                product_code=product.code,
+                product_code=product.issuer_code,
                 product_name=product.name,
                 shares=snapshot.shares,
                 cost=snapshot.cost,
