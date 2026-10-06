@@ -171,6 +171,8 @@ def create_user_transaction() -> ResponseReturnValue:
         account_id = uuid.UUID(data["account_id"])
         product_id = uuid.UUID(data["product_id"])
         txn_type = TransactionType(data["type"])
+        reversal_of = uuid.UUID(data["reversal_of"]) if data.get("reversal_of") else None
+        cycle_ref = uuid.UUID(data["cycle_ref"]) if data.get("cycle_ref") else None
         effective_date_val = date.fromisoformat(data["effective_date"])
         shares_delta = Decimal(data["shares_delta"])
         cash_amount = Decimal(data["cash_amount"])
@@ -197,6 +199,8 @@ def create_user_transaction() -> ResponseReturnValue:
                 external_ref=external_ref,
                 idempotency_key=idempotency_key,
                 note=note,
+                reversal_of=reversal_of,
+                cycle_ref=cycle_ref,
             )
             db.commit()
             return (
@@ -213,5 +217,9 @@ def create_user_transaction() -> ResponseReturnValue:
                 ),
                 201,
             )
+        except ValueError as exc:
+            return jsonify(error=str(exc)), 400
+        except TransactionNotFoundError:
+            return jsonify(error="not_found"), 404
         except DuplicateTransactionError:
             return jsonify(error="duplicate_transaction"), 400

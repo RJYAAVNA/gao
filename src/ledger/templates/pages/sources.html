@@ -1,0 +1,43 @@
+{% extends "base/layout.html" %}
+{% block title %}数据来源 - 理财台账{% endblock %}
+{% block content %}<div class="page-header"><h1>数据来源</h1><p>填写公开来源，试抓取后提交审核。审核通过前不会改变公共净值。</p></div>
+<p>建设银行已接入公开产品目录和历史行情；产品需经管理员核对映射后启用。</p>
+{% if g.current_user.is_admin %}
+<section class="card mb-lg"><h2>建设银行公开目录</h2>
+<p>包含其他发行机构的代销产品。目录未披露完整币种、登记编码和份额类别，关联前须核对官方产品资料。</p>
+<form id="ccb-discover"><label for="ccb-page">目录页码</label><input id="ccb-page" type="number" min="1" max="10000" value="1" required><button class="btn" type="submit">查询该页</button></form>
+<p id="ccb-status" role="status" aria-live="polite"></p><div id="ccb-candidates"></div>
+<form id="ccb-mapping" class="source-form" hidden><h3>核对并关联产品</h3><p id="ccb-selected"></p>
+<label for="ccb-product-search">查找已有产品</label><input id="ccb-product-search" type="search" placeholder="产品名称或代码">
+<label for="ccb-product">对应账本产品</label><select id="ccb-product" required></select>
+<label for="ccb-bank">建设银行机构</label><select id="ccb-bank" required></select>
+<p id="ccb-identity"></p><label for="ccb-note">核对依据（官方资料、登记编码与份额类别）</label><textarea id="ccb-note" required maxlength="512"></textarea>
+<label><input id="ccb-confirm" type="checkbox" required>已核对实际发行机构、登记编码、份额类别及币种，确认是同一产品</label>
+<button type="submit" class="btn btn-primary">批准映射并启用行情</button></form></section>
+{% endif %}
+<div id="source-message" role="status" tabindex="-1" aria-live="polite"></div>
+<form id="source-form" class="card source-form"><h2>新增采集来源</h2>
+<label for="source-name">来源名称</label><input id="source-name" name="display_name" required maxlength="128">
+<label for="source-product-search">查找产品</label><input id="source-product-search" type="search" placeholder="产品名称或代码">
+<label for="source-product">对应产品</label><select id="source-product" name="product_id" required><option value="">正在加载产品…</option></select>
+<label for="source-url">公开 HTTPS 地址</label><input id="source-url" name="url" type="url" required placeholder="https://银行官方域名/公开接口"><small>域名需先由管理员批准；不接受个人网银登录信息。</small>
+<label for="source-format">数据格式</label><select id="source-format" name="format"><option value="json">JSON</option><option value="html">HTML 表格</option></select>
+<label for="source-code">来源中的产品代码</label><input id="source-code" name="source_product_id" required maxlength="128">
+<label for="source-rows">JSON 数据行路径 / HTML 表格选择器</label><input id="source-rows" name="rows" value="data.list" required>
+<label for="field-product">产品代码字段 / 表格列号（从 0 开始）</label><input id="field-product" name="field_product" value="productCode" required>
+<label for="field-date">净值日期字段 / 列号</label><input id="field-date" name="field_date" value="navDate" required>
+<label for="field-nav">单位净值字段 / 列号</label><input id="field-nav" name="field_nav" value="unitNav">
+<details><summary>其他指标、请求与分页</summary>
+<label for="field-cumulative">累计净值字段 / 列号</label><input id="field-cumulative" name="field_cumulative">
+<label for="field-tenk">官方万份收益字段 / 列号</label><input id="field-tenk" name="field_tenk">
+<label for="field-seven">官方七日年化字段 / 列号（小数比例）</label><input id="field-seven" name="field_seven">
+<label for="request-method">请求方式</label><select id="request-method" name="method"><option>GET</option><option>POST</option></select>
+<label for="request-params">查询参数（JSON 对象，值为字符串）</label><textarea id="request-params" name="params">{}</textarea>
+<label for="date-format">日期格式</label><select id="date-format" name="date_format"><option value="%Y-%m-%d">2026-10-04</option><option value="%Y%m%d">20261004</option><option value="%Y/%m/%d">2026/10/04</option></select>
+<label for="page-param">页码参数（不分页留空）</label><input id="page-param" name="page_param">
+</details><button type="submit" class="btn btn-primary">保存草稿</button></form>
+<h2>我的申请</h2><div id="my-sources"></div>
+{% if g.current_user.is_admin %}<section class="card"><h2>管理员：允许的公开域名</h2><form id="domain-form"><label for="domain">域名</label><input id="domain" name="hostname" required placeholder="www.example.com"><button class="btn">批准域名</button></form><p id="domain-list"></p></section><h2>待审核申请</h2><div id="source-reviews"></div><h2>已启用来源</h2><div id="active-sources"></div>{% endif %}
+{% endblock %}
+{% block extra_css %}<style>.source-form[hidden]{display:none}.source-form{display:grid;gap:.65rem;margin-bottom:1.5rem}.source-form input,.source-form select,.source-form textarea,#domain{min-height:44px;width:100%;box-sizing:border-box;background:var(--color-background);color:var(--color-foreground);border:1px solid var(--color-input-border);padding:.6rem}.source-form details>*{display:block;margin:.5rem 0}#source-message{margin:1rem 0;white-space:pre-wrap}.source-preview{white-space:pre-wrap;overflow-wrap:anywhere;max-height:20rem;overflow:auto}</style>{% endblock %}
+{% block extra_js %}{% if g.current_user.is_admin %}<script src="{{ url_for('static', filename='js/ccb.js') }}" defer></script>{% endif %}<script src="{{ url_for('static', filename='js/sources.js') }}" defer></script>{% endblock %}

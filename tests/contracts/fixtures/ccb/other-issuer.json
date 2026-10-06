@@ -1,0 +1,25 @@
+{
+  "CURR_TOTAL_REC": "2",
+  "Fnd_Nm": "浦银理财季季鑫封闭式673号（公司专享）",
+  "Splmt_Opin_Dsc": "",
+  "SUCCESS": "true",
+  "TOTAL_PAGE": "1",
+  "TOTAL_REC": "2",
+  "CURR_TOTAL_PAGE": "1",
+  "Fnd_ShrtNm": "",
+  "Ctrl_Ind_Cgy": "09",
+  "Index_Group": [
+    {
+      "Qtn_Dt": "20260928",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.000000",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260924",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.000000",
+      "Rmrk_1_Inf": ""
+    }
+  ]
+}

@@ -17,6 +17,7 @@ def main() -> int:
         print("可用命令:")
         print("  check-config      验证配置是否正确")
         print("  schedule-daily    生成每日同步任务")
+        print("  rebuild-v2        检查历史账本；--apply 重建投影并排队估值")
         print("  worker            启动 Worker 进程")
         return 1
 
@@ -27,12 +28,17 @@ def main() -> int:
             settings = get_settings()
             print("[OK] Configuration validated")
             print(f"  Environment: {settings.app_env}")
-            print(f"  Database URL: {settings.database_url}")
+            print("  Database: PostgreSQL (configured)")
             print(f"  Session cookie secure: {settings.session_cookie_secure}")
             return 0
         except Exception as e:
             print(f"[ERROR] Configuration validation failed: {e}", file=sys.stderr)
             return 1
+
+    elif command == "rebuild-v2":
+        from ledger.maintenance import rebuild_v2
+
+        return rebuild_v2(sys.argv[2:])
 
     elif command == "schedule-daily":
         scheduler = Scheduler()

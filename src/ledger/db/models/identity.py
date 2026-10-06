@@ -9,6 +9,7 @@ import enum
 import uuid
 from datetime import datetime
 
+from argon2 import PasswordHasher
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -20,8 +21,6 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from argon2 import PasswordHasher
 
 from ledger.db.base import Base, TimestampMixin, UUIDPrimaryKey, enum_column
 
@@ -92,6 +91,20 @@ class User(Base, UUIDPrimaryKey, TimestampMixin):
 class TokenPurpose(str, enum.Enum):
     VERIFY_EMAIL = "verify_email"
     RESET_PASSWORD = "reset_password"
+
+
+class AuthSession(Base, UUIDPrimaryKey):
+    """Revocable browser session; only a hash of the opaque cookie is stored."""
+
+    __tablename__ = "auth_sessions"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class EmailToken(Base, UUIDPrimaryKey, TimestampMixin):

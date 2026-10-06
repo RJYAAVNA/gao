@@ -6,6 +6,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
+import json
+import time
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -57,26 +61,38 @@ class ChinawealthCollector(Collector):
                     "pageSize": 100,
                 }
 
-                response = await client.post(
-                    url,
-                    json=payload,
-                    headers={
-                        "User-Agent": "Mozilla/5.0",
-                        "Accept": "application/json",
-                        "Content-Type": "application/json",
-                    },
-                )
-                response.raise_for_status()
-
-                raw_content = response.content
-                data = response.json()
-
-                return self._parse_response(
-                    data=data,
-                    source_product_id=source_product_id,
-                    raw_content=raw_content,
-                    request_context=f"POST {url} {payload}",
-                )
+                pages: list[Any] = []
+                points: list[NavDataPoint] = []
+                seen: set[str] = set()
+                deadline = time.monotonic() + 60
+                for page in range(1, min(int(self.config.get("max_pages", 100)), 100) + 1):
+                    if time.monotonic() >= deadline:
+                        return CollectionResult(False, [], error_type="timeout")
+                    payload["pageNum"] = page
+                    response = await client.post(
+                        url, json=payload, headers={"Accept": "application/json"}
+                    )
+                    response.raise_for_status()
+                    if len(response.content) > 5 * 1024 * 1024:
+                        return CollectionResult(False, [], error_type="response_too_large")
+                    data = response.json()
+                    parsed = self._parse_response(data, source_product_id, response.content, url)
+                    if not parsed.success:
+                        return parsed
+                    rows = data.get("data", {}).get("list", [])
+                    digest = hashlib.sha256(response.content).hexdigest()
+                    if rows and digest in seen:
+                        return CollectionResult(False, [], error_type="pagination_did_not_advance")
+                    seen.add(digest)
+                    pages.append(data)
+                    points.extend(parsed.data_points)
+                    raw = json.dumps(pages).encode()
+                    if len(raw) > 5 * 1024 * 1024:
+                        return CollectionResult(False, [], error_type="response_too_large")
+                    if len(rows) < 100:
+                        return CollectionResult(True, points, raw_content=raw, request_context=url)
+                    await asyncio.sleep(2)
+                return CollectionResult(False, [], error_type="pagination_limit_reached")
 
         except httpx.TimeoutException as e:
             return CollectionResult(
@@ -90,7 +106,11 @@ class ChinawealthCollector(Collector):
                 success=False,
                 data_points=[],
                 error_message=f"HTTP {e.response.status_code}: {e}",
-                error_type="server_error" if e.response.status_code >= 500 else "not_found",
+                error_type="rate_limited"
+                if e.response.status_code == 429
+                else "server_error"
+                if e.response.status_code >= 500
+                else "not_found",
             )
         except Exception as e:
             return CollectionResult(
@@ -149,7 +169,7 @@ class ChinawealthCollector(Collector):
                 valuation_date = datetime.strptime(nav_date_str, "%Y-%m-%d").date()
 
                 # 单位净值
-                if unit_nav := item.get("unitNav"):
+                if (unit_nav := item.get("unitNav")) is not None:
                     try:
                         value = Decimal(str(unit_nav))
                     except (ValueError, TypeError):
@@ -166,7 +186,7 @@ class ChinawealthCollector(Collector):
                         )
 
                 # 累计净值
-                if cumulative_nav := item.get("cumulativeNav"):
+                if (cumulative_nav := item.get("cumulativeNav")) is not None:
                     try:
                         value = Decimal(str(cumulative_nav))
                     except (ValueError, TypeError):

@@ -70,6 +70,7 @@
 {% endblock %}
 
 {% block content %}
+<p role="status">以下图表为演示数据，不代表您的真实资产。</p>
 <div class="page-header">
     <h1>收益分析</h1>
     <p class="text-muted">可视化查看您的投资收益趋势</p>
@@ -189,15 +190,15 @@ const returnData = {{ return_data|tojson }};
 
 // ECharts theme colors
 const colors = {
-    primary: '#F59E0B',
-    secondary: '#FBBF24',
-    accent: '#8B5CF6',
-    success: '#10B981',
-    danger: '#EF4444',
-    text: '#F8FAFC',
-    textMuted: '#94A3B8',
-    background: '#222735',
-    border: '#334155'
+    primary: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
+    secondary: getComputedStyle(document.documentElement).getPropertyValue('--color-secondary').trim(),
+    accent: getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim(),
+    success: getComputedStyle(document.documentElement).getPropertyValue('--color-success').trim(),
+    danger: getComputedStyle(document.documentElement).getPropertyValue('--color-destructive').trim(),
+    text: getComputedStyle(document.documentElement).getPropertyValue('--color-foreground').trim(),
+    textMuted: getComputedStyle(document.documentElement).getPropertyValue('--color-muted-foreground').trim(),
+    background: getComputedStyle(document.documentElement).getPropertyValue('--color-card').trim(),
+    border: getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim()
 };
 
 // Common chart options

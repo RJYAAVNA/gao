@@ -8,6 +8,7 @@
     <p class="text-muted">管理您的账户和应用偏好</p>
 </div>
 
+<div class="metrics-actions"><a href="/sources" class="btn">管理银行数据来源</a></div>
 <!-- Settings Sections -->
 <section class="settings-section grid-item">
     <h2 class="section-title">账户信息</h2>
@@ -170,7 +171,7 @@ input:disabled + .toggle-slider {
 <script>
 function handleLogout() {
     if (confirm('确定要退出登录吗？')) {
-        window.location.href = '{{ url_for("main.logout") }}';
+        window.ledgerIdentity.logout();
     }
 }
 </script>

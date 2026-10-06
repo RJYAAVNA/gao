@@ -1,0 +1,7 @@
+{% extends "base/layout.html" %}
+{% block content %}<a class="back-link" href="/positions">返回持仓</a><h1>{{ position.product_name }}</h1><p>{{ position.product_code }} · {{ position.currency }}</p>
+{% set metrics = position.metrics %}
+<section class="card"><dl class="metric-grid">{% for key,label,percent in [('holding_pnl','本轮持仓收益',false),('holding_annualized_return','持仓年化',true),('latest_income','最新收益',false),('latest_income_per_10k_value','最新万收',false),('unrealized_pnl','未实现收益',false),('realized_pnl','历史已实现收益',false)] %}<div><dt>{{ label }}</dt><dd>{{ metrics.get(key)|metric(percent) }}</dd></div>{% endfor %}</dl>
+<p>净值日期 {{ metrics.get('nav_date') or '暂无' }} · {{ metrics.get('quality')|quality_label }}</p><p>最新区间 {{ metrics.get('interval_start') or '—' }} 至 {{ metrics.get('interval_end') or '—' }}</p><p>周期开始 {{ metrics.get('cycle_start') or '—' }} · 资金占用 {{ metrics.get('capital_days') or '—' }} 元·天</p>
+{% if metrics.get('annualized_reason') %}<p>{{ metrics.annualized_reason|reason_label }}</p>{% endif %}</section>
+<h2>交易记录</h2>{% for txn in transactions %}<article class="card mb-lg"><p>{{ txn.effective_date }} · {{ txn.type.value }}</p><p>份额 {{ txn.shares_delta }} · 金额 {{ txn.cash_amount|metric }} · 费用 {{ txn.fee|metric }}</p></article>{% else %}<p>暂无交易</p>{% endfor %}{% endblock %}

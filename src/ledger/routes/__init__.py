@@ -8,16 +8,23 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, redirect, render_template, request, send_from_directory, url_for
-from sqlalchemy.orm import joinedload
+from flask import (
+    Blueprint,
+    current_app,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 
 from ledger.auth import get_current_user_id
-from ledger.auth.session import clear_current_user, set_current_user
+from ledger.auth.session import clear_current_user
 from ledger.db.models.catalog import Product
-from ledger.db.models.identity import User
 from ledger.db.models.portfolio import Position, Transaction
 from ledger.db.session import get_session
-from ledger.portfolio.summary_service import get_simple_portfolio_summary, get_top_positions
 
 bp = Blueprint("main", __name__)
 
@@ -31,35 +38,18 @@ def index() -> str | Any:
     if user_id is None:
         return redirect(url_for("main.login"))
 
-    # 获取用户的组合汇总数据
+    from ledger.portfolio.read_model import rows, summarize
+
     with get_session() as db:
-        portfolio_summary = get_simple_portfolio_summary(db, user_id)
-        position_summaries = get_top_positions(db, user_id, limit=5)
-
-        summary = {
-            "total_market_value": float(portfolio_summary.total_market_value),
-            "total_pnl": float(portfolio_summary.total_pnl),
-            "total_return": float(portfolio_summary.total_return),
-            "position_count": portfolio_summary.position_count,
-            "annualized_return": float(portfolio_summary.annualized_return),
-            "valuation_date": portfolio_summary.valuation_date.strftime("%Y-%m-%d"),
-        }
-
-        top_positions = [
-            {
-                "id": str(pos.id),
-                "product_name": pos.product_name,
-                "product_code": pos.product_code,
-                "quantity": float(pos.shares),
-                "market_value": float(pos.market_value),
-                "cost_basis": float(pos.cost),
-                "pnl": float(pos.pnl),
-                "return_rate": float(pos.return_rate),
-            }
-            for pos in position_summaries
-        ]
-
-    return render_template("pages/index.html", summary=summary, top_positions=top_positions)
+        items = rows(db, user_id, request.args.to_dict())
+        totals = summarize(items)
+    return render_template(
+        "pages/portfolio_v2.html",
+        positions=items[:5],
+        totals=totals,
+        overview=True,
+        **_filter_options(user_id),
+    )
 
 
 @bp.route("/positions")
@@ -71,25 +61,18 @@ def positions() -> str | Any:
     if user_id is None:
         return redirect(url_for("main.login"))
 
-    # 获取用户的持仓数据
+    from ledger.portfolio.read_model import rows, summarize
+
     with get_session() as db:
-        position_summaries = get_top_positions(db, user_id, limit=100)
-
-        positions_data = [
-            {
-                "id": str(pos.id),
-                "product_name": pos.product_name,
-                "product_code": pos.product_code,
-                "quantity": float(pos.shares),
-                "market_value": float(pos.market_value),
-                "cost_basis": float(pos.cost),
-                "pnl": float(pos.pnl),
-                "return_rate": float(pos.return_rate),
-            }
-            for pos in position_summaries
-        ]
-
-    return render_template("pages/positions.html", positions=positions_data)
+        items = rows(db, user_id, request.args.to_dict())
+        totals = summarize(items)
+    return render_template(
+        "pages/portfolio_v2.html",
+        positions=items,
+        totals=totals,
+        overview=False,
+        **_filter_options(user_id),
+    )
 
 
 @bp.route("/positions/<uuid:position_id>")
@@ -112,49 +95,21 @@ def position_detail(position_id: str) -> str | Any:
         if not position:
             return jsonify({"error": "not_found"}), 404
 
-        # 获取产品信息
-        product = db.query(Product).filter(Product.id == position.product_id).first()
-        if not product:
-            return jsonify({"error": "product_not_found"}), 404
+        from ledger.portfolio.read_model import rows
 
-        # 获取相关交易记录
-        transactions_raw = (
+        items = rows(db, user_id, {"account_id": str(position.account_id), "status": "all"})
+        item = next(item for item in items if item["id"] == str(position.id))
+        transactions = (
             db.query(Transaction)
             .filter(
+                Transaction.user_id == user_id,
                 Transaction.account_id == position.account_id,
                 Transaction.product_id == position.product_id,
             )
-            .order_by(Transaction.effective_date.desc())
+            .order_by(Transaction.effective_date.desc(), Transaction.created_at.desc())
             .all()
         )
-
-        # 转换交易数据为模板格式
-        transactions = []
-        for txn in transactions_raw:
-            # 计算单价（如果有份额变动）
-            price = abs(txn.cash_amount / txn.shares_delta) if txn.shares_delta != 0 else 0
-
-            transactions.append({
-                "transaction_type": txn.type.value,
-                "transaction_date": txn.effective_date,
-                "shares": abs(float(txn.shares_delta)),
-                "price": float(price),
-                "amount": float(txn.cash_amount),
-            })
-
-        # 构造持仓数据
-        position_data = {
-            "product_name": product.name,
-            "product_code": product.issuer_code,
-            "quantity": float(position.shares),
-            "market_value": float(position.market_value),
-            "cost_basis": float(position.cost),
-            "pnl": float(position.pnl),
-            "return_rate": float(position.return_rate),
-            "unit_nav": float(position.unit_nav),
-        }
-
-    return render_template("pages/position_detail.html", position=position_data, transactions=transactions)
+        return render_template("pages/position_v2.html", position=item, transactions=transactions)
 
 
 @bp.route("/analytics")
@@ -202,7 +157,7 @@ def analytics() -> str:
 def settings() -> str:
     """设置页。"""
     # 模拟用户数据
-    user = {"username": "demo_user"}
+    user = g.current_user
 
     return render_template("pages/settings.html", user=user)
 
@@ -265,26 +220,58 @@ def login() -> str | Any:
         if not username or not password:
             return render_template("pages/login.html", error="请输入用户名和密码")
 
-        # 验证用户
-        with get_session() as db:
-            user = db.query(User).filter(User.username == username).first()
-            if user is None or not user.check_password(password):
-                return render_template("pages/login.html", error="用户名或密码错误")
+        from ledger.auth.service import AuthenticationError, sign_in
 
-            # 设置会话
-            set_current_user(user)
+        try:
+            sign_in(username, password)
+        except AuthenticationError:
+            return render_template(
+                "pages/login.html", error="登录失败：请检查凭据、账号状态或稍后重试"
+            ), 401
 
         # 登录成功，重定向到首页
         next_url = request.args.get("next")
-        if next_url and next_url.startswith("/"):
+        if (
+            next_url
+            and next_url.startswith("/")
+            and not next_url.startswith("//")
+            and "\\" not in next_url
+        ):
             return redirect(next_url)
         return redirect(url_for("main.index"))
 
     return render_template("pages/login.html")
 
 
-@bp.route("/logout")
+@bp.route("/logout", methods=["POST"])
 def logout() -> Any:
     """登出。"""
     clear_current_user()
     return redirect(url_for("main.login"))
+
+
+@bp.route("/sources")
+def source_management() -> str:
+    return render_template("pages/sources.html")
+
+
+def _filter_options(user_id: Any) -> dict[str, Any]:
+    from sqlalchemy import select
+
+    from ledger.db.models.catalog import Institution
+    from ledger.db.models.portfolio import BankAccount
+
+    with get_session() as db:
+        accounts = list(db.scalars(select(BankAccount).where(BankAccount.user_id == user_id)))
+        banks = list(
+            db.scalars(select(Institution).where(Institution.id.in_([a.bank_id for a in accounts])))
+        )
+        currencies = list(
+            db.scalars(
+                select(Product.currency)
+                .join(Position, Position.product_id == Product.id)
+                .where(Position.user_id == user_id)
+                .distinct()
+            )
+        )
+        return {"accounts": accounts, "banks": banks, "currencies": currencies}

@@ -8,7 +8,7 @@ from flask import Blueprint, jsonify, request
 from flask.typing import ResponseReturnValue
 from sqlalchemy import func, select
 
-from ledger.api.auth import admin_required, login_required
+from ledger.api.auth import admin_required
 from ledger.db.models.jobs import Job, JobStatus, JobType
 from ledger.db.session import get_session_context
 from ledger.jobs.scheduler import Scheduler
@@ -17,7 +17,7 @@ bp = Blueprint("jobs", __name__, url_prefix="/api/jobs")
 
 
 @bp.route("", methods=["GET"])
-@login_required
+@admin_required
 def list_jobs() -> ResponseReturnValue:
     """列出任务。"""
     status = request.args.get("status")
@@ -77,7 +77,7 @@ def list_jobs() -> ResponseReturnValue:
 
 
 @bp.route("/<uuid:job_id>", methods=["GET"])
-@login_required
+@admin_required
 def get_job(job_id: uuid.UUID) -> ResponseReturnValue:
     """获取任务详情。"""
     with get_session_context() as db:
@@ -124,7 +124,7 @@ def schedule_product(product_id: uuid.UUID) -> ResponseReturnValue:
 
 
 @bp.route("/stats", methods=["GET"])
-@login_required
+@admin_required
 def get_stats() -> ResponseReturnValue:
     """获取任务统计。"""
     with get_session_context() as db:

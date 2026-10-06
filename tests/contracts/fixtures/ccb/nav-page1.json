@@ -1,0 +1,73 @@
+{
+  "CURR_TOTAL_REC": "10",
+  "Fnd_Nm": "私享按周开放式产品（代销建信理财）",
+  "Splmt_Opin_Dsc": "2026.10.01",
+  "SUCCESS": "true",
+  "TOTAL_PAGE": "7",
+  "TOTAL_REC": "64",
+  "CURR_TOTAL_PAGE": "1",
+  "Fnd_ShrtNm": "",
+  "Ctrl_Ind_Cgy": "09",
+  "Index_Group": [
+    {
+      "Qtn_Dt": "20261003",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124845",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20261002",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124800",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20261001",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124759",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260930",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124713",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260929",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124808",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260928",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124618",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260927",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124787",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260926",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124746",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260925",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124700",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260924",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "1.124655",
+      "Rmrk_1_Inf": ""
+    }
+  ]
+}

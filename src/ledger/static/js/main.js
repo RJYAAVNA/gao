@@ -4,7 +4,12 @@
 // Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/static/sw.js')
+    navigator.serviceWorker.getRegistrations().then(async registrations => {
+        for (const registration of registrations) {
+          if (new URL(registration.scope).pathname === '/static/') await registration.unregister();
+        }
+        return navigator.serviceWorker.register('/sw.js', {scope: '/'});
+      })
       .then(registration => {
         console.log('ServiceWorker registered:', registration.scope);
       })

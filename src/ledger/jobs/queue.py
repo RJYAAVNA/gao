@@ -9,10 +9,11 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select, update
+from sqlalchemy import case, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from ledger.db.models.jobs import Job, JobAttempt, JobStatus, JobType
+from ledger.db.models.jobs import ErrorType, Job, JobAttempt, JobStatus, JobType
 
 
 def enqueue_job(
@@ -45,29 +46,29 @@ def enqueue_job(
     Returns:
         任务对象
     """
-    # 检查是否已有活跃任务
-    stmt = select(Job).where(
-        Job.dedupe_key == dedupe_key,
-        Job.status.in_([JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.RETRY_WAIT]),
+    # The database uniqueness constraint is the final arbiter under concurrent requests.
+    stmt = (
+        insert(Job)
+        .values(
+            type=job_type,
+            dedupe_key=dedupe_key,
+            payload=payload,
+            priority=priority,
+            max_attempts=max_attempts,
+            source_id=source_id,
+            product_id=product_id,
+            requested_by=requested_by,
+        )
+        .on_conflict_do_nothing(index_elements=[Job.dedupe_key])
+        .returning(Job.id)
     )
-    existing = db.execute(stmt).scalar_one_or_none()
-
-    if existing:
-        return existing
-
-    # 创建新任务
-    job = Job(
-        type=job_type,
-        dedupe_key=dedupe_key,
-        payload=payload,
-        priority=priority,
-        max_attempts=max_attempts,
-        source_id=source_id,
-        product_id=product_id,
-        requested_by=requested_by,
+    inserted_id = db.scalar(stmt)
+    job = (
+        db.get(Job, inserted_id)
+        if inserted_id
+        else db.scalar(select(Job).where(Job.dedupe_key == dedupe_key))
     )
-    db.add(job)
-    db.flush()
+    assert job is not None
     return job
 
 
@@ -143,7 +144,12 @@ def complete_job(
         return False
 
     # 租约版本检查：防止旧 worker 覆盖新 worker 的结果
-    if job.lease_version != lease_version:
+    if (
+        job.lease_version != lease_version
+        or job.status != JobStatus.RUNNING
+        or job.lease_until is None
+        or job.lease_until <= datetime.now(UTC)
+    ):
         return False
 
     job.status = status
@@ -156,7 +162,11 @@ def complete_job(
         attempt=job.attempt_count,
         lease_version=lease_version,
         status=status,
-        error_type=error_type,
+        error_type=ErrorType(error_type)
+        if error_type in {e.value for e in ErrorType}
+        else ErrorType.UNKNOWN
+        if error_type
+        else None,
         error_message=error_message,
         finished_at=datetime.now(UTC),
         result=result,
@@ -190,7 +200,13 @@ def retry_job(
     stmt = select(Job).where(Job.id == job_id).with_for_update()
     job = db.execute(stmt).scalar_one_or_none()
 
-    if not job or job.lease_version != lease_version:
+    if (
+        not job
+        or job.lease_version != lease_version
+        or job.status != JobStatus.RUNNING
+        or job.lease_until is None
+        or job.lease_until <= datetime.now(UTC)
+    ):
         return False
 
     # 记录本次尝试
@@ -199,7 +215,11 @@ def retry_job(
         attempt=job.attempt_count,
         lease_version=lease_version,
         status=JobStatus.RETRY_WAIT,
-        error_type=error_type,
+        error_type=ErrorType(error_type)
+        if error_type in {e.value for e in ErrorType}
+        else ErrorType.UNKNOWN
+        if error_type
+        else None,
         error_message=error_message,
         finished_at=datetime.now(UTC),
         result={},
@@ -236,12 +256,16 @@ def reclaim_expired_leases(db: Session) -> int:
             Job.lease_until < now,
         )
         .values(
-            status=JobStatus.QUEUED,
+            status=case(
+                (Job.attempt_count >= Job.max_attempts, JobStatus.FAILED.value),
+                else_=JobStatus.QUEUED.value,
+            ),
             lease_until=None,
             locked_by=None,
+            lease_version=Job.lease_version + 1,
         )
     )
 
     result = db.execute(stmt)
-    db.commit()
+    db.flush()
     return result.rowcount

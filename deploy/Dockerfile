@@ -2,7 +2,7 @@
 # 多阶段构建：构建层装依赖，运行层只保留运行所需内容。
 
 # ---------------------------------------------------------------- 构建层
-FROM python:3.12-slim AS builder
+FROM python:3.12-slim-bookworm AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
@@ -24,12 +24,13 @@ RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install .
 
 # ---------------------------------------------------------------- 运行层
-FROM python:3.12-slim AS runtime
+FROM python:3.12-slim-bookworm AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
-    TZ=Asia/Shanghai
+    TZ=Asia/Shanghai \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright
 
 # 只装运行时库，不含编译工具
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -42,6 +43,8 @@ RUN groupadd --system --gid 1001 ledger \
     && useradd --system --uid 1001 --gid ledger --create-home ledger
 
 COPY --from=builder /opt/venv /opt/venv
+RUN python -m playwright install --with-deps chromium \
+    && chmod -R a+rX /opt/playwright
 
 WORKDIR /app
 COPY --chown=ledger:ledger src/ ./src/

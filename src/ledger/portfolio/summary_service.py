@@ -162,13 +162,10 @@ def get_top_positions(
         return []
 
     # 查询最新估值日期
-    date_stmt = (
-        select(func.max(PortfolioSnapshot.date))
-        .where(
-            and_(
-                PortfolioSnapshot.run_id == run.id,
-                PortfolioSnapshot.user_id == user_id,
-            )
+    date_stmt = select(func.max(PortfolioSnapshot.date)).where(
+        and_(
+            PortfolioSnapshot.run_id == run.id,
+            PortfolioSnapshot.user_id == user_id,
         )
     )
     latest_date = db.scalar(date_stmt)
@@ -247,18 +244,15 @@ def get_simple_portfolio_summary(
         return summary
 
     # 如果没有估值数据，返回基于持仓的简单汇总
-    position_stmt = (
-        select(Position)
-        .where(
-            and_(
-                Position.user_id == user_id,
-                Position.shares > 0,
-            )
+    position_stmt = select(Position).where(
+        and_(
+            Position.user_id == user_id,
+            Position.shares > 0,
         )
     )
     positions = db.scalars(position_stmt).all()
 
-    total_cost = sum(pos.remaining_cost for pos in positions)
+    total_cost = sum((pos.remaining_cost for pos in positions), Decimal(0))
     position_count = len(positions)
 
     return PortfolioSummary(

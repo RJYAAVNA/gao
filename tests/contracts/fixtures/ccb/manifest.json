@@ -1,0 +1,38 @@
+{
+  "captured_at": "2026-10-04",
+  "source": "https://www3.ccb.com/tran/WCCMainPlatV5",
+  "sanitization": "Removed server trace identifiers only; public product data retained.",
+  "samples": {
+    "products": {
+      "original_sha256": "1e6fe4f73806bca4ffb28d824e7d4f126d07476622693647ba77535d2dff3a0a"
+    },
+    "products-page2": {
+      "original_sha256": "8e8fba86ed24d160cb32ef615d171c4fc0e8c4db3a9d13831c8de7705966d617"
+    },
+    "nav-page1": {
+      "original_sha256": "74876bec8f0963763e609404038c678b8230d5c2de9bb9036be953380b7045cd"
+    },
+    "nav-page2": {
+      "original_sha256": "f2a08d72aa411e53a93e15a66dd562e47b9b40d8fc573c363dd54ca74f6b36aa"
+    },
+    "cash-income": {
+      "original_sha256": "39a36d90c028c18d2848b7b445c8b8541654188cadd46893cd664812edfe92c7"
+    },
+    "cash-seven": {
+      "original_sha256": "0e7c18018648e65ea4074928d555c774b3fe1cd92f813674d0c954ca5adce66e"
+    },
+    "other-issuer": {
+      "original_sha256": "7db99ac11a97443f38580b986e91e9aff83e9dcc85fe23a0f7866ccfe209817c"
+    },
+    "no-data": {
+      "original_sha256": "0c5f0ab5272104c72367ff0c576a44135a9cd63a3d2286a82e6578f814daae73",
+      "request": {
+        "TXCODE": "NLC164",
+        "IvsmPd_ECD": "JX070421040007S01",
+        "SrtDt": "20990101",
+        "TmDt": "20990102",
+        "Ctrl_Ind_Cgy": "09"
+      }
+    }
+  }
+}

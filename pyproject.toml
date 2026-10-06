@@ -25,6 +25,7 @@ dependencies = [
     "argon2-cffi==23.1.0",
 
     # 采集
+    "playwright==1.51.0",            # 建行公开 JSON 的隔离浏览器传输
     "httpx==0.28.1",
     "tenacity==9.0.0",
     "lxml==5.3.0",
@@ -99,6 +100,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q --strict-markers"
 markers = [
+    "browser: real browser regressions (RUN_BROWSER_TESTS=1)",
     "integration: 需要 PostgreSQL 的集成测试",
     "contract: 采集器契约测试，使用冻结样本",
 ]

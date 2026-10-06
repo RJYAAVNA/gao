@@ -1,0 +1,29 @@
+{% extends "base/layout.html" %}
+{% block title %}持仓与收益 - 理财台账{% endblock %}
+{% block content %}
+<div class="page-header"><h1>{{ '资产概览' if overview else '持仓与收益' }}</h1><p class="text-muted">按实际净值日期计算 · 缺失数据不计为零</p></div>
+<form method="get" class="card metrics-filters">
+<label>账户<select name="account_id"><option value="">全部账户</option>{% for account in accounts %}<option value="{{ account.id }}" {% if request.args.get('account_id') == account.id|string %}selected{% endif %}>{{ account.alias }}</option>{% endfor %}</select></label>
+<label>销售银行<select name="bank_id"><option value="">全部银行</option>{% for bank in banks %}<option value="{{ bank.id }}" {% if request.args.get('bank_id') == bank.id|string %}selected{% endif %}>{{ bank.name }}</option>{% endfor %}</select></label>
+<label>状态<select name="status"><option value="holding">持仓</option><option value="closed" {% if request.args.get('status') == 'closed' %}selected{% endif %}>清仓</option><option value="all" {% if request.args.get('status') == 'all' %}selected{% endif %}>全部</option></select></label>
+<label>币种<select name="currency"><option value="">分币种展示</option>{% for currency in currencies %}<option {% if request.args.get('currency') == currency %}selected{% endif %}>{{ currency }}</option>{% endfor %}</select></label>
+<label>排序<select name="sort">{% for key, label in [('market_value','市值'),('holding_annualized_return','持仓年化'),('latest_income','最新收益'),('latest_income_per_10k_value','最新万收')] %}<option value="{{ key }}" {% if request.args.get('sort') == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button class="btn btn-primary">应用筛选</button>
+</form>
+{% for total in totals %}
+<section class="card mb-lg"><h2>{{ total.currency }} · {{ total.position_count }} 项持仓</h2>
+<dl class="metric-grid">{% for key,label,percent in [('market_value','持仓市值',false),('holding_pnl','本轮收益',false),('holding_annualized_return','持仓年化',true),('latest_income','最新披露收益合计',false),('latest_income_per_10k_value','最新万收',false)] %}<div><dt>{{ label }}</dt><dd>{{ total.get(key)|metric(percent) }}</dd></div>{% endfor %}</dl>
+<p class="text-muted">{{ '日期不一致，请按下方各产品区间查看' if total.mixed_dates else '收益按共同披露区间汇总' }} · {{ total.quality|quality_label }}</p>
+</section>{% endfor %}
+<div class="metrics-actions"><a href="/sources" class="btn">管理数据来源</a><button id="revalue" class="btn btn-primary" type="button">更新收益计算</button></div>
+<p id="valuation-status" role="status" aria-live="polite"></p>
+{% for position in positions %}
+<article class="card mb-lg position-card"><h2><a href="/positions/{{ position.id }}">{{ position.product_name }}</a></h2><p class="text-muted">{{ position.product_code }} · {{ position.account_name }} · {{ position.currency }}</p>
+{% set metrics = position.metrics %}
+<dl class="metric-grid"><div><dt>市值</dt><dd>{{ position.market_value|metric }}</dd></div><div><dt>本轮持仓收益</dt><dd>{{ metrics.get('holding_pnl')|metric }}</dd></div><div><dt>持仓年化</dt><dd>{{ metrics.get('holding_annualized_return')|metric(true) }}</dd></div><div><dt>最新收益</dt><dd>{{ metrics.get('latest_income')|metric }}</dd></div><div><dt>最新万收</dt><dd>{{ metrics.get('latest_income_per_10k_value')|metric }}</dd></div></dl>
+<p class="text-muted">净值日期 {{ metrics.get('nav_date') or '暂无' }} · {{ metrics.get('quality')|quality_label }}{% if metrics.get('interval_start') %} · 收益区间 {{ metrics.interval_start }} 至 {{ metrics.interval_end }}（{{ metrics.interval_days }}天）{% endif %}</p>
+{% if metrics.get('reason') %}<p>{{ metrics.reason|reason_label }}</p>{% endif %}
+{% if metrics.get('official_income_per_10k_shares') is not none %}<p>官方万份收益 {{ metrics.get('official_income_per_10k_shares')|metric }}（{{ metrics.get('official_income_per_10k_shares_date') }}）</p>{% endif %}
+{% if metrics.get('official_seven_day_annualized') is not none %}<p>官方七日年化 {{ metrics.get('official_seven_day_annualized')|metric(true) }}</p>{% endif %}
+</article>{% else %}<div class="card"><p>当前筛选范围暂无持仓。已有交易但尚无估值时，可点击“更新收益计算”。</p></div>{% endfor %}
+{% endblock %}
+{% block extra_js %}<script src="{{ url_for('static', filename='js/portfolio.js') }}" defer></script>{% endblock %}

@@ -48,7 +48,7 @@ def _split_top_level(inner: str) -> set[str]:
             buf += ch
     if buf.strip():
         items.append(buf)
-    return {re.sub(r"\s+", " ", it).strip() for it in items if it.strip()}
+    return {re.sub(r",\s*", ", ", re.sub(r"\s+", " ", it)).strip() for it in items if it.strip()}
 
 
 def _parse_create_table(ddl: str) -> tuple[str, set[str]]:
@@ -84,6 +84,30 @@ def migration_tables(migration_sql: str) -> dict[str, set[str]]:
     for match in re.finditer(r"CREATE TABLE \w+ \(.*?\n\);", migration_sql, re.S):
         name, items = _parse_create_table(match.group(0))
         tables[name] = items
+    # Apply subsequent ALTERs in order, so this compares the final migrated schema.
+    for match in re.finditer(r"ALTER TABLE (\w+) (.*?);", migration_sql, re.S):
+        name, operation = match.groups()
+        operation = re.sub(r"\s+", " ", operation).strip()
+        entries = tables[name]
+        if operation.startswith("ADD COLUMN "):
+            entries.update(_split_top_level(operation[len("ADD COLUMN ") :]))
+        elif operation.startswith("ADD CONSTRAINT "):
+            entries.update(_split_top_level(operation[len("ADD ") :]))
+        elif operation.startswith("DROP CONSTRAINT "):
+            prefix = "CONSTRAINT " + operation.split()[2] + " "
+            entries.difference_update({item for item in entries if item.startswith(prefix)})
+        elif operation.startswith("ALTER COLUMN "):
+            column = operation.split()[2]
+            old = next(item for item in entries if item.startswith(column + " "))
+            entries.remove(old)
+            if operation.endswith("SET NOT NULL"):
+                entries.add(old + " NOT NULL")
+            elif operation.endswith("DROP DEFAULT"):
+                entries.add(re.sub(r" DEFAULT .*?(?= NOT NULL|$)", "", old))
+            else:
+                raise AssertionError("Unsupported ALTER in schema verifier: " + operation)
+        else:
+            raise AssertionError("Unsupported ALTER in schema verifier: " + operation)
     return tables
 
 
@@ -124,11 +148,11 @@ def test_migration_creates_all_indexes(migration_sql: str) -> None:
 def test_downgrade_drops_everything() -> None:
     """downgrade 必须删除所有表，否则回滚后残留对象会阻碍重新升级。"""
     versions = PROJECT_ROOT / "migrations" / "versions"
-    initial = next(versions.glob("*0001_initial*.py"))
-    source = initial.read_text(encoding="utf-8")
-
-    downgrade_part = source.split("def downgrade()")[1]
-    dropped = set(re.findall(r'op\.drop_table\("(\w+)"\)', downgrade_part))
+    dropped: set[str] = set()
+    for migration in versions.glob("*.py"):
+        source = migration.read_text(encoding="utf-8")
+        downgrade_part = source.split("def downgrade()")[1]
+        dropped.update(re.findall(r'op\.drop_table\("(\w+)"\)', downgrade_part))
     assert (
         set(Base.metadata.tables) == dropped
     ), f"downgrade 未删除: {set(Base.metadata.tables) - dropped}"

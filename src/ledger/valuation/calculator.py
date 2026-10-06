@@ -90,7 +90,22 @@ def calculate_position_valuation(
     Returns:
         估值结果
     """
-    # 如果有净值数据，计算市值和未实现收益
+    # Closed positions retain realized profit without requiring a fresh NAV.
+    if position.shares == 0:
+        return PositionValuation(
+            account_id=position.account_id,
+            product_id=position.product_id,
+            valuation_date=valuation_date,
+            shares=position.shares,
+            cost=position.remaining_cost,
+            market_value=Decimal("0"),
+            unrealized_pnl=Decimal("0"),
+            realized_pnl_cumulative=position.realized_pnl,
+            nav_observation_id=None,
+            nav_date=None,
+            nav_value=None,
+            quality=Completeness.COMPLETE,
+        )
     if nav_data and nav_data.metric_type == MetricType.UNIT_NAV:
         market_value = position.shares * nav_data.value
         unrealized_pnl = market_value - position.remaining_cost
@@ -216,8 +231,7 @@ def calculate_period_pnl(
         return None
 
     if portfolio_start is None or portfolio_start.cumulative_pnl is None:
-        # 从零开始，区间收益 = 期末累计收益
-        return portfolio_end.cumulative_pnl
+        return None
 
     return portfolio_end.cumulative_pnl - portfolio_start.cumulative_pnl
 

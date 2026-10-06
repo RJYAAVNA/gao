@@ -100,6 +100,13 @@ def create_account(
     Raises:
         DuplicateAccountAliasError: 别名重复
     """
+    from ledger.db.models.identity import User
+
+    db.execute(select(User.id).where(User.id == user_id).with_for_update())
+    if db.scalar(
+        select(BankAccount.id).where(BankAccount.user_id == user_id, BankAccount.alias == alias)
+    ):
+        raise DuplicateAccountAliasError("account_alias_exists")
     account = BankAccount(
         user_id=user_id,
         bank_id=bank_id,

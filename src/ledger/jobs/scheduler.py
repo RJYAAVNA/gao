@@ -38,8 +38,8 @@ class Scheduler:
             created_count = 0
             for mapping in mappings:
                 dedupe_key = (
-                    f"sync_nav:{mapping.product_id}:{mapping.source_id}:"
-                    f"{datetime.now(UTC).date()}"
+                    f"sync:{mapping.source_id}:{mapping.product_id}:{mapping.source.config_version}:"
+                    f"{datetime.now(UTC).strftime("%Y%m%d%H")}"
                 )
 
                 job = enqueue_job(
@@ -50,6 +50,7 @@ class Scheduler:
                         "source_id": str(mapping.source_id),
                         "product_id": str(mapping.product_id),
                         "source_product_id": mapping.source_product_id,
+                        "config_version": mapping.source.config_version,
                     },
                     priority=5,  # 默认优先级
                     source_id=mapping.source_id,
@@ -86,8 +87,8 @@ class Scheduler:
             created_count = 0
             for mapping in mappings:
                 dedupe_key = (
-                    f"sync_nav:{mapping.product_id}:{mapping.source_id}:"
-                    f"{datetime.now(UTC).date()}"
+                    f"sync:{mapping.source_id}:{mapping.product_id}:{mapping.source.config_version}:"
+                    f"{datetime.now(UTC).strftime("%Y%m%d%H")}"
                 )
 
                 job = enqueue_job(
@@ -98,6 +99,7 @@ class Scheduler:
                         "source_id": str(mapping.source_id),
                         "product_id": str(mapping.product_id),
                         "source_product_id": mapping.source_product_id,
+                        "config_version": mapping.source.config_version,
                     },
                     priority=5,  # 默认优先级
                     source_id=mapping.source_id,
@@ -132,7 +134,7 @@ def main() -> None:
     # 每天凌晨 3 点生成同步任务
     aps.add_job(
         scheduler.schedule_daily_sync,
-        trigger=CronTrigger(hour=3, minute=0),
+        trigger=CronTrigger(hour="3,12,20", minute=0, timezone="Asia/Shanghai"),
         id="daily_sync",
         name="每日净值同步",
     )

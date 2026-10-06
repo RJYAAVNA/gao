@@ -10,6 +10,7 @@ from typing import Any
 from flask import Flask, jsonify
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 from ledger.config import Settings, get_settings
 from ledger.db.session import get_engine
@@ -24,6 +25,8 @@ def create_app(settings: Settings | None = None) -> Flask:
     settings 显式传入便于测试；生产走环境变量，缺密钥时直接启动失败。
     """
     cfg = settings or get_settings()
+    if cfg.is_prod and not cfg.session_cookie_secure:
+        raise ValueError("Production requires SESSION_COOKIE_SECURE=true")
     configure_logging(cfg.log_level, cfg.app_env)
 
     app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -31,6 +34,7 @@ def create_app(settings: Settings | None = None) -> Flask:
     app.config.update(
         SECRET_KEY=cfg.session_secret,
         SESSION_COOKIE_HTTPONLY=True,
+        SESSION_REFRESH_EACH_REQUEST=False,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=cfg.session_cookie_secure,
         # 会话有效期，按需调整
@@ -41,23 +45,44 @@ def create_app(settings: Settings | None = None) -> Flask:
         LEDGER_SETTINGS=cfg,
     )
 
+    from ledger.auth.session import init_identity
+
+    init_identity(app)
     csrf.init_app(app)
+
+    from decimal import ROUND_HALF_UP, Decimal
+
+    @app.template_filter("metric")
+    def metric(value: Any, percent: bool = False) -> str:
+        if value is None:
+            return "—"
+        number = Decimal(str(value)) * (100 if percent else 1)
+        formatted = format(number.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP), ",.2f")
+        return formatted + ("%" if percent else "")
+
+    @app.template_filter("quality_label")
+    def quality_label(value: Any) -> str:
+        return {
+            "complete": "数据完整",
+            "partial": "部分数据待更新",
+            "missing": "暂无可用估值",
+            "carried_forward": "沿用已公布净值",
+            "unsupported": "暂不支持此类估值",
+        }.get(value, "待更新")
+
+    @app.template_filter("reason_label")
+    def reason_label(value: Any) -> str:
+        return {
+            "valuation_required": "请先更新收益计算",
+            "missing_nav": "尚无有效净值",
+            "unsupported_valuation_method": "现金管理类暂仅展示官方指标",
+            "incomplete_history": "历史不完整，仅展示可核实收益",
+            "zero_capital_days": "持有不足一天，暂不计算年化",
+        }.get(value, "数据不足，暂不计算")
 
     _register_health_routes(app)
     _register_blueprints(app)
     _register_error_handlers(app)
-
-    # 豁免所有 API 蓝图的 CSRF 检查
-    _exempt_api_blueprints(app)
-
-    return app
-
-
-def _exempt_api_blueprints(app: Flask) -> None:
-    """为所有 API 蓝图豁免 CSRF 检查。"""
-    for rule in app.url_map.iter_rules():
-        if rule.endpoint and rule.rule.startswith('/api/'):
-            csrf.exempt(app.view_functions[rule.endpoint])
 
     return app
 
@@ -68,10 +93,15 @@ def _register_blueprints(app: Flask) -> None:
     from ledger.api.auth import bp as auth_bp
     from ledger.api.catalog import bp as catalog_bp
     from ledger.api.jobs import bp as jobs_bp
+    from ledger.api.portfolio import bp as portfolio_bp
     from ledger.api.positions import bp as positions_bp
+    from ledger.api.sources import bp as sources_bp
     from ledger.api.transactions import bp as transactions_bp
     from ledger.api.valuation import bp as valuation_bp
     from ledger.routes import bp as main_bp
+
+    app.register_blueprint(sources_bp)
+    app.register_blueprint(portfolio_bp)
 
     # 注册 API 蓝图
     app.register_blueprint(auth_bp)
@@ -136,6 +166,30 @@ def _register_health_routes(app: Flask) -> None:
 
 def _register_error_handlers(app: Flask) -> None:
     """统一错误响应。不向客户端泄露内部细节。"""
+
+    @app.errorhandler(401)
+    def unauthorized(_e: Any) -> Any:
+        return jsonify(error="unauthorized"), 401
+
+    @app.errorhandler(409)
+    def conflict(_e: Any) -> Any:
+        return jsonify(error="identity_changed"), 409
+
+    @app.errorhandler(IntegrityError)
+    def constraint_violation(_e: Any) -> Any:
+        return jsonify(error="constraint_conflict"), 409
+
+    @app.errorhandler(ValueError)
+    def invalid_value(_e: Any) -> Any:
+        return jsonify(error="invalid_params"), 400
+
+    @app.errorhandler(KeyError)
+    def missing_field(_e: Any) -> Any:
+        return jsonify(error="missing_field"), 400
+
+    @app.errorhandler(400)
+    def invalid_request(_e: Any) -> Any:
+        return jsonify(error="invalid_request"), 400
 
     @app.errorhandler(404)
     def not_found(_e: Any) -> Any:

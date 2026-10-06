@@ -96,6 +96,9 @@ def create_valuation_run() -> tuple[Any, int]:
     data = request.get_json()
     req = TriggerValuationRequest.model_validate(data)
 
+    if (req.to_date - req.from_date).days > 3660:
+        return jsonify(error="date_range_too_large"), 400
+
     with session_scope() as session:
         run = trigger_valuation(
             session=session,
@@ -104,24 +107,10 @@ def create_valuation_run() -> tuple[Any, int]:
             to_date=req.to_date,
         )
 
-        return (
-            jsonify(
-                ValuationRunResponse(
-                    id=run.id,
-                    user_id=run.user_id,
-                    from_date=run.from_date,
-                    to_date=run.to_date,
-                    status=run.status.value,
-                    formula_version=run.formula_version,
-                    input_version=run.input_version,
-                    is_current=run.is_current,
-                    started_at=run.started_at,
-                    finished_at=run.finished_at,
-                    error_message=run.error_message,
-                ).model_dump(mode="json")
-            ),
-            201,
-        )
+        from ledger.db.models.jobs import Job
+
+        job = session.scalar(select(Job).where(Job.dedupe_key == f"valuation:{run.id}"))
+        return jsonify(run_id=str(run.id), job_id=str(job.id) if job else None), 202
 
 
 @bp.route("/runs", methods=["GET"])
@@ -275,10 +264,12 @@ def get_portfolio_snapshots() -> tuple[Any, int]:
                     id=snap.id,
                     valuation_date=snap.date,
                     currency=snap.currency,
-                    market_value=str(snap.market_value) if snap.market_value else None,
+                    market_value=str(snap.market_value) if snap.market_value is not None else None,
                     total_cost=str(snap.total_cost),
-                    cumulative_pnl=str(snap.cumulative_pnl) if snap.cumulative_pnl else None,
-                    period_pnl=str(snap.period_pnl) if snap.period_pnl else None,
+                    cumulative_pnl=str(snap.cumulative_pnl)
+                    if snap.cumulative_pnl is not None
+                    else None,
+                    period_pnl=str(snap.period_pnl) if snap.period_pnl is not None else None,
                     completeness=snap.completeness.value,
                     valued_product_count=snap.valued_product_count,
                     total_product_count=snap.total_product_count,
@@ -359,8 +350,10 @@ def get_position_snapshots() -> tuple[Any, int]:
                     valuation_date=snap.date,
                     shares=str(snap.shares),
                     cost=str(snap.cost),
-                    market_value=str(snap.market_value) if snap.market_value else None,
-                    unrealized_pnl=str(snap.unrealized_pnl) if snap.unrealized_pnl else None,
+                    market_value=str(snap.market_value) if snap.market_value is not None else None,
+                    unrealized_pnl=str(snap.unrealized_pnl)
+                    if snap.unrealized_pnl is not None
+                    else None,
                     realized_pnl_cumulative=str(snap.realized_pnl_cumulative),
                     nav_date=snap.nav_date,
                     quality=snap.quality.value,
@@ -368,3 +361,28 @@ def get_position_snapshots() -> tuple[Any, int]:
                 for snap in snapshots
             ]
         ), 200
+
+
+@bp.post("/recalculate")
+@login_required
+def recalculate() -> tuple[Any, int]:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import func
+
+    from ledger.db.models.jobs import Job
+    from ledger.db.models.portfolio import Transaction
+
+    with session_scope() as session:
+        start = session.scalar(
+            select(func.min(Transaction.effective_date)).where(
+                Transaction.user_id == g.current_user.id
+            )
+        )
+        if not start:
+            return jsonify(error="no_transactions"), 400
+        end = datetime.now(ZoneInfo("Asia/Shanghai")).date()
+        run = trigger_valuation(session, g.current_user.id, start, end)
+        job = session.scalar(select(Job).where(Job.dedupe_key == f"valuation:{run.id}"))
+        return jsonify(run_id=str(run.id), job_id=str(job.id) if job else None), 202

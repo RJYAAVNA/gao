@@ -16,6 +16,7 @@ from ledger.db.models.catalog import (
 )
 from ledger.db.models.identity import (
     AuditEvent,
+    AuthSession,
     EmailToken,
     TokenPurpose,
     User,
@@ -26,6 +27,7 @@ from ledger.db.models.jobs import (
     ErrorType,
     Job,
     JobAttempt,
+    JobRequest,
     JobStatus,
     JobType,
     ScheduleWatermark,
@@ -58,6 +60,7 @@ from ledger.db.models.valuation import (
 __all__ = [
     "ArtifactKind",
     "AuditEvent",
+    "AuthSession",
     "BankAccount",
     "Base",
     "Completeness",
@@ -70,6 +73,7 @@ __all__ = [
     "InstitutionType",
     "Job",
     "JobAttempt",
+    "JobRequest",
     "JobStatus",
     "JobType",
     "ManualNavSubmission",
@@ -95,3 +99,7 @@ __all__ = [
     "ValuationMethod",
     "ValuationRun",
 ]
+
+from ledger.db.models.sources import AllowedDomain, SourceProposal, SourceProposalVersion
+
+__all__ += ["AllowedDomain", "SourceProposal", "SourceProposalVersion"]

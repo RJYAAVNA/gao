@@ -9,11 +9,15 @@ from typing import Any
 
 from ledger.collectors.base import Collector
 from ledger.collectors.bocwm import BocwmCollector
+from ledger.collectors.ccb import CcbCollector
 from ledger.collectors.chinawealth import ChinawealthCollector
+from ledger.collectors.configurable import ConfigurableCollector
 
 # 采集器注册表
 COLLECTOR_REGISTRY: dict[str, type[Collector]] = {
     "bocwm": BocwmCollector,
+    "configurable": ConfigurableCollector,
+    "ccb": CcbCollector,
     "chinawealth": ChinawealthCollector,
 }
 

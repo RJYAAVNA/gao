@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ledger.auth import create_user
 from ledger.catalog.service import create_institution, create_product
 from ledger.db.models.catalog import InstitutionType, ValuationMethod
-from ledger.db.models.identity import UserRole
+from ledger.db.models.identity import UserRole, UserStatus
 from ledger.db.models.portfolio import TransactionType
 from ledger.portfolio.account_service import create_account
 from ledger.portfolio.position_service import get_position, list_positions
@@ -26,7 +26,14 @@ from ledger.portfolio.transaction_service import (
 @pytest.fixture
 def test_setup(db_session: Session) -> dict:
     """创建测试用户、银行、发行机构、产品、账户。"""
-    user = create_user(db_session, "testuser", "Pass123", "test@example.com", UserRole.USER)
+    user = create_user(
+        db_session,
+        "testuser",
+        "test@example.com",
+        "Pass123",
+        UserRole.USER,
+        status=UserStatus.ACTIVE,
+    )
     bank = create_institution(db_session, "测试银行", InstitutionType.BANK)
     issuer = create_institution(db_session, "测试发行机构", InstitutionType.ISSUER)
     product = create_product(

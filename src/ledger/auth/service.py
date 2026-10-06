@@ -9,10 +9,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from ledger.auth.password import hash_password, needs_rehash, verify_password
@@ -40,6 +40,10 @@ class AccountLockedError(AuthenticationError):
     def __init__(self, locked_until: datetime) -> None:
         self.locked_until = locked_until
         super().__init__(f"账号已锁定，解锁时间：{locked_until}")
+
+
+class LoginRateLimitError(AuthenticationError):
+    """Shared database login throttle."""
 
 
 class AccountDisabledError(AuthenticationError):
@@ -111,7 +115,25 @@ def authenticate_user(
         AccountLockedError: 账号锁定中
         AccountDisabledError: 账号已停用
     """
-    stmt = select(User).where(User.username == username)
+    # A transaction-scoped lock makes the shared per-IP throttle safe across workers.
+    if ip_address:
+        if db.bind is not None and db.bind.dialect.name == "postgresql":
+            db.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": "login:" + ip_address}
+            )
+        attempts = (
+            db.scalar(
+                select(func.count(AuditEvent.id)).where(
+                    AuditEvent.action == "login",
+                    AuditEvent.ip_address == ip_address,
+                    AuditEvent.created_at > datetime.now(UTC) - timedelta(minutes=1),
+                )
+            )
+            or 0
+        )
+        if attempts >= 5:
+            raise LoginRateLimitError("Too many login attempts")
+    stmt = select(User).where(User.username == username).with_for_update()
     user = db.scalar(stmt)
 
     # 记录登录尝试事件
@@ -193,5 +215,32 @@ def change_password(db: Session, user: User, new_password: str) -> None:
         user: 用户对象
         new_password: 新密码明文
     """
+    from ledger.auth.session import revoke_user_sessions
+
+    revoke_user_sessions(db, user.id)
     user.password_hash = hash_password(new_password)
     db.flush()
+
+
+def sign_in(username: str, password: str) -> User:
+    """Shared HTTP login boundary; failed attempts must commit before returning."""
+    from flask import current_app, request
+
+    from ledger.auth.session import set_current_user
+    from ledger.db.session import get_session
+
+    with get_session() as db:
+        try:
+            user = authenticate_user(
+                db,
+                current_app.config["LEDGER_SETTINGS"],
+                username,
+                password,
+                ip_address=request.remote_addr,
+            )
+        except AuthenticationError:
+            db.commit()
+            raise
+        db.commit()
+        set_current_user(user)
+        return user
