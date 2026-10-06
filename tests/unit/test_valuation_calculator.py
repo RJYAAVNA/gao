@@ -274,7 +274,7 @@ class TestPeriodPnl:
         )
 
         period_pnl = calculate_period_pnl(portfolio_end, None)
-        assert period_pnl == Decimal("10")
+        assert period_pnl is None  # Missing opening valuation is not a zero balance.
 
 
 class TestReturnCalculations:

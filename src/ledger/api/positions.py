@@ -15,7 +15,6 @@ from ledger.db.session import get_session
 from ledger.portfolio.position_service import (
     PositionNotFoundError,
     get_position,
-    list_positions,
 )
 
 bp = Blueprint("positions", __name__, url_prefix="/api/positions")
@@ -48,40 +47,13 @@ def list_user_positions() -> ResponseReturnValue:
     if user_id is None:
         return jsonify(error="unauthorized"), 401
 
-    account_id_str = request.args.get("account_id")
-    include_zero_shares = request.args.get("include_zero_shares", "false").lower() == "true"
+    from ledger.portfolio.read_model import rows
 
-    try:
-        account_id = uuid.UUID(account_id_str) if account_id_str else None
-    except (ValueError, TypeError):
-        return jsonify(error="invalid_account_id"), 400
-
+    filters = request.args.to_dict()
+    if filters.get("include_zero_shares") == "true":
+        filters.setdefault("status", "all")
     with get_session() as db:
-        positions = list_positions(
-            db,
-            user_id=user_id,
-            account_id=account_id,
-            include_zero_shares=include_zero_shares,
-        )
-        return jsonify(
-            [
-                {
-                    "id": str(pos.id),
-                    "account_id": str(pos.account_id),
-                    "product_id": str(pos.product_id),
-                    "shares": str(pos.shares),
-                    "remaining_cost": str(pos.remaining_cost),
-                    "realized_pnl": str(pos.realized_pnl),
-                    "last_transaction_date": (
-                        pos.last_transaction_date.isoformat() if pos.last_transaction_date else None
-                    ),
-                    "ledger_version": pos.ledger_version,
-                    "created_at": pos.created_at.isoformat(),
-                    "updated_at": pos.updated_at.isoformat(),
-                }
-                for pos in positions
-            ]
-        )
+        return jsonify(rows(db, user_id, filters))
 
 
 @bp.get("/<uuid:account_id>/<uuid:product_id>")
@@ -99,20 +71,19 @@ def get_user_position(account_id: uuid.UUID, product_id: uuid.UUID) -> ResponseR
 
     with get_session() as db:
         try:
-            pos = get_position(db, user_id, account_id, product_id)
-            return jsonify(
-                id=str(pos.id),
-                account_id=str(pos.account_id),
-                product_id=str(pos.product_id),
-                shares=str(pos.shares),
-                remaining_cost=str(pos.remaining_cost),
-                realized_pnl=str(pos.realized_pnl),
-                last_transaction_date=(
-                    pos.last_transaction_date.isoformat() if pos.last_transaction_date else None
+            get_position(db, user_id, account_id, product_id)
+            from ledger.portfolio.read_model import rows
+
+            result = next(
+                (
+                    item
+                    for item in rows(db, user_id, {"status": "all", "account_id": str(account_id)})
+                    if item["product_id"] == str(product_id)
                 ),
-                ledger_version=pos.ledger_version,
-                created_at=pos.created_at.isoformat(),
-                updated_at=pos.updated_at.isoformat(),
+                None,
             )
+            if result is None:
+                return jsonify(error="not_found"), 404
+            return jsonify(result)
         except PositionNotFoundError:
             return jsonify(error="not_found"), 404

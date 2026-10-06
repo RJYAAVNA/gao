@@ -34,6 +34,7 @@ class JobType(str, enum.Enum):
     BACKFILL_PRODUCT_NAV = "backfill_product_nav"  # 补数指定区间
     RECALC_PORTFOLIO = "recalc_portfolio"  # 重算用户快照
     DISCOVER_PRODUCTS = "discover_products"  # 来源产品目录发现
+    PREVIEW_SOURCE = "preview_source"
     SEND_EMAIL = "send_email"  # 验证邮件等
 
 
@@ -165,3 +166,16 @@ class ScheduleWatermark(Base, TimestampMixin):
     # 已成功生成任务的最后一个调度时点
     last_scheduled_slot: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     note: Mapped[str | None] = mapped_column(String(255))
+
+
+class JobRequest(Base, UUIDPrimaryKey):
+    """Private request receipt for a possibly shared public collection job."""
+
+    __tablename__ = "job_requests"
+    __table_args__ = (UniqueConstraint("user_id", "job_id", name="uq_job_requests_user_job"),)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("jobs.id", ondelete="CASCADE")
+    )

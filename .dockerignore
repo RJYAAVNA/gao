@@ -1,0 +1,12 @@
+.git
+.venv
+.tmp
+.env
+.env.*
+__pycache__
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.exe
+*.dump
+*.backup

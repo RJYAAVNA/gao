@@ -20,11 +20,15 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
+    Index,
     Integer,
     Numeric,
     String,
     UniqueConstraint,
+    text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -53,6 +57,16 @@ class ValuationRun(Base, UUIDPrimaryKey, TimestampMixin):
     """一次收益计算。"""
 
     __tablename__ = "valuation_runs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "id", name="uq_valuation_runs_user_id"),
+        Index(
+            "uq_current_valuation_user",
+            "user_id",
+            unique=True,
+            postgresql_where=text("is_current"),
+            sqlite_where=text("is_current"),
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
@@ -85,6 +99,18 @@ class PositionSnapshot(Base, UUIDPrimaryKey):
 
     __tablename__ = "position_snapshots"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "run_id"],
+            ["valuation_runs.user_id", "valuation_runs.id"],
+            name="fk_position_snapshot_user_run",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["user_id", "account_id"],
+            ["bank_accounts.user_id", "bank_accounts.id"],
+            name="fk_position_snapshot_user_account",
+            ondelete="CASCADE",
+        ),
         UniqueConstraint(
             "run_id", "account_id", "product_id", "date", name="uq_position_snapshots_identity"
         ),
@@ -100,6 +126,7 @@ class PositionSnapshot(Base, UUIDPrimaryKey):
     )
     date: Mapped[date_type] = mapped_column(Date, nullable=False)
 
+    metrics: Mapped[dict[str, object]] = mapped_column(JSONB, default=dict, nullable=False)
     shares: Mapped[Decimal] = mapped_column(Numeric(28, 12), nullable=False)
     cost: Mapped[Decimal] = mapped_column(Numeric(24, 8), nullable=False)
     # 无可用净值时为 NULL，不能用 0 冒充
@@ -122,6 +149,12 @@ class PortfolioSnapshot(Base, UUIDPrimaryKey):
 
     __tablename__ = "portfolio_snapshots"
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["user_id", "run_id"],
+            ["valuation_runs.user_id", "valuation_runs.id"],
+            name="fk_portfolio_snapshot_user_run",
+            ondelete="CASCADE",
+        ),
         UniqueConstraint("run_id", "date", "currency", name="uq_portfolio_snapshots_identity"),
     )
 

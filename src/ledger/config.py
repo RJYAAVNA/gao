@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------- 任务
     worker_concurrency: int = Field(default=2, ge=1, le=16)
     scheduler_enabled: bool = True
+    metrics_v2_enabled: bool = True
+    source_collection_enabled: bool = True
 
     # ---------------------------------------------------------------- 安全
     # 默认关闭注册：第一版由管理员用 ledger.cli create-admin 建号试用，

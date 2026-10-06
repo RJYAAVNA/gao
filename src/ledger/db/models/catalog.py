@@ -114,9 +114,12 @@ class DataSource(Base, UUIDPrimaryKey, TimestampMixin):
     """
 
     __tablename__ = "data_sources"
-    __table_args__ = (UniqueConstraint("adapter_key", name="uq_data_sources_adapter_key"),)
+    __table_args__ = (UniqueConstraint("source_key", name="uq_data_sources_source_key"),)
 
     # 适配器标识，对应 collectors/registry.py 里注册的实现，如 'bocwm'、'chinawealth'
+    source_key: Mapped[str] = mapped_column(
+        String(128), default=lambda: str(uuid.uuid4()), nullable=False
+    )
     adapter_key: Mapped[str] = mapped_column(String(64), nullable=False)
     display_name: Mapped[str] = mapped_column(String(128), nullable=False)
     institution_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -119,6 +119,8 @@ def create_transaction(
     idempotency_key: str | None = None,
     import_batch_id: uuid.UUID | None = None,
     note: str | None = None,
+    reversal_of: uuid.UUID | None = None,
+    cycle_ref: uuid.UUID | None = None,
 ) -> Transaction:
     """创建交易流水并更新持仓。
 
@@ -143,6 +145,30 @@ def create_transaction(
     Raises:
         DuplicateTransactionError: 幂等键重复
     """
+    from ledger.db.models.catalog import Product
+    from ledger.db.models.identity import User
+    from ledger.db.models.portfolio import BankAccount
+    from ledger.valuation.replay import validate_transaction
+
+    db.execute(select(User.id).where(User.id == user_id).with_for_update())
+    if idempotency_key and db.scalar(
+        select(Transaction.id).where(
+            Transaction.user_id == user_id, Transaction.idempotency_key == idempotency_key
+        )
+    ):
+        raise DuplicateTransactionError("idempotency_key_exists")
+    account = db.scalar(
+        select(BankAccount)
+        .where(BankAccount.id == account_id, BankAccount.user_id == user_id)
+        .with_for_update()
+    )
+    if account is None:
+        raise TransactionNotFoundError("account_not_found")
+    product = db.get(Product, product_id)
+    if product is None:
+        raise TransactionNotFoundError("product_not_found")
+    if product.currency != account.currency:
+        raise ValueError("account_product_currency_mismatch")
     txn = Transaction(
         user_id=user_id,
         account_id=account_id,
@@ -156,7 +182,26 @@ def create_transaction(
         idempotency_key=idempotency_key,
         import_batch_id=import_batch_id,
         note=note,
+        reversal_of=reversal_of,
+        cycle_ref=cycle_ref,
     )
+    validate_transaction(txn)
+    if txn_type == TransactionType.REINVEST_DIVIDEND:
+        # The dividend and purchase are one atomic business event, not two HTTP requests.
+        income = Transaction(
+            user_id=user_id,
+            account_id=account_id,
+            product_id=product_id,
+            type=TransactionType.CASH_DIVIDEND,
+            effective_date=effective_date,
+            shares_delta=Decimal(0),
+            cash_amount=cash_amount,
+            fee=Decimal(0),
+            cycle_ref=cycle_ref,
+        )
+        db.add(income)
+        db.flush()
+        txn.linked_transaction_id = income.id
     db.add(txn)
 
     try:
@@ -166,9 +211,42 @@ def create_transaction(
             raise DuplicateTransactionError(f"幂等键 '{idempotency_key}' 已存在") from None
         raise
 
+    if txn_type == TransactionType.REINVEST_DIVIDEND:
+        income.linked_transaction_id = txn.id
+        db.flush()
+    if txn_type == TransactionType.REVERSAL and reversal_of:
+        original = get_transaction(db, user_id, reversal_of)
+        if original.linked_transaction_id:
+            linked = get_transaction(db, user_id, original.linked_transaction_id)
+            db.add(
+                Transaction(
+                    user_id=user_id,
+                    account_id=account_id,
+                    product_id=product_id,
+                    type=TransactionType.REVERSAL,
+                    effective_date=effective_date,
+                    shares_delta=Decimal(0),
+                    cash_amount=Decimal(0),
+                    fee=Decimal(0),
+                    reversal_of=linked.id,
+                )
+            )
+            db.flush()
     # 更新持仓投影
-    _update_position(db, user_id, account_id, product_id, txn)
+    rebuild_positions_for_account(db, user_id, account_id)
 
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from sqlalchemy import func
+
+    from ledger.valuation.service import trigger_valuation
+
+    start = db.scalar(
+        select(func.min(Transaction.effective_date)).where(Transaction.user_id == user_id)
+    )
+    if start:
+        trigger_valuation(db, user_id, start, datetime.now(ZoneInfo("Asia/Shanghai")).date())
     return txn
 
 
@@ -205,36 +283,23 @@ def _update_position(
         )
         db.add(pos)
 
-    # 份额变动
-    pos.shares += txn.shares_delta
+    from ledger.valuation.replay import PositionState
+
+    state = PositionState(
+        account_id=account_id,
+        product_id=product_id,
+        shares=pos.shares,
+        remaining_cost=pos.remaining_cost,
+        realized_pnl=pos.realized_pnl,
+    )
+    state.apply_transaction(txn)
+    pos.shares, pos.remaining_cost, pos.realized_pnl = (
+        state.shares,
+        state.remaining_cost,
+        state.realized_pnl,
+    )
     pos.last_transaction_date = txn.effective_date
     pos.ledger_version += 1
-
-    # 成本与收益核算
-    if txn.type in (
-        TransactionType.BUY,
-        TransactionType.OPENING_BALANCE,
-        TransactionType.REINVEST_DIVIDEND,
-    ):
-        # 买入/期初/再投：成本累加
-        pos.remaining_cost += txn.cash_amount + txn.fee
-    elif txn.type == TransactionType.REDEEM:
-        # 赎回：按份额比例减少成本，差额记为已实现收益
-        if pos.shares > 0 and txn.shares_delta < 0:
-            # 单位成本
-            unit_cost = pos.remaining_cost / pos.shares if pos.shares != 0 else Decimal(0)
-            # 本次赎回对应成本
-            cost_reduction = abs(txn.shares_delta) * unit_cost
-            # 已实现收益 = 赎回金额 - 成本 - 手续费
-            pos.realized_pnl += txn.cash_amount - cost_reduction - txn.fee
-            pos.remaining_cost -= cost_reduction
-    elif txn.type == TransactionType.CASH_DIVIDEND:
-        # 现金分红：直接计入已实现收益
-        pos.realized_pnl += txn.cash_amount - txn.fee
-    elif txn.type == TransactionType.FEE:
-        # 独立费用：从剩余成本扣除
-        pos.remaining_cost -= txn.fee
-
     db.flush()
 
 
@@ -252,28 +317,39 @@ def rebuild_positions_for_account(
         user_id: 用户 ID
         account_id: 账户 ID
     """
-    # 清空现有持仓
-    stmt = select(Position).where(
-        Position.user_id == user_id,
-        Position.account_id == account_id,
-    )
-    positions = db.scalars(stmt).all()
-    for pos in positions:
-        db.delete(pos)
-    db.flush()
+    from ledger.valuation.replay import replay_transactions
 
-    # 按时间顺序重放交易
-    txn_stmt = (
-        select(Transaction)
-        .where(
-            Transaction.user_id == user_id,
-            Transaction.account_id == account_id,
+    transactions = list(
+        db.scalars(
+            select(Transaction)
+            .where(Transaction.user_id == user_id, Transaction.account_id == account_id)
+            .order_by(Transaction.effective_date, Transaction.created_at, Transaction.id)
         )
-        .order_by(Transaction.effective_date, Transaction.created_at)
     )
-    transactions = db.scalars(txn_stmt).all()
-
-    for txn in transactions:
-        _update_position(db, user_id, account_id, txn.product_id, txn)
-
+    state = replay_transactions(user_id, transactions)
+    existing = {
+        p.product_id: p
+        for p in db.scalars(
+            select(Position)
+            .where(Position.user_id == user_id, Position.account_id == account_id)
+            .with_for_update()
+        )
+    }
+    for (_, product_id), item in state.positions.items():
+        pos = existing.pop(product_id, None)
+        if pos is None:
+            pos = Position(
+                user_id=user_id, account_id=account_id, product_id=product_id, ledger_version=0
+            )
+            db.add(pos)
+        pos.shares, pos.remaining_cost, pos.realized_pnl = (
+            item.shares,
+            item.remaining_cost,
+            item.realized_pnl,
+        )
+        pos.last_transaction_date = item.last_transaction_date
+        pos.ledger_version += 1
+    for pos in existing.values():
+        pos.shares = pos.remaining_cost = pos.realized_pnl = Decimal("0")
+        pos.ledger_version += 1
     db.flush()

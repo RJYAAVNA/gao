@@ -1,0 +1,73 @@
+{
+  "CURR_TOTAL_REC": "10",
+  "Fnd_Nm": "恒赢按日开放式产品（代销建信理财）",
+  "Splmt_Opin_Dsc": "2025.08.19",
+  "SUCCESS": "true",
+  "TOTAL_PAGE": "6",
+  "TOTAL_REC": "60",
+  "CURR_TOTAL_PAGE": "1",
+  "Fnd_ShrtNm": "",
+  "Ctrl_Ind_Cgy": "01",
+  "Index_Group": [
+    {
+      "Qtn_Dt": "20260929",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010700",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260928",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010800",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260927",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010800",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260926",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010800",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260925",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010800",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260924",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010800",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260923",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010900",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260922",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010900",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260921",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010900",
+      "Rmrk_1_Inf": ""
+    },
+    {
+      "Qtn_Dt": "20260920",
+      "Rmrk_2_Inf": "",
+      "Exp_YldRto": "0.010900",
+      "Rmrk_1_Inf": ""
+    }
+  ]
+}

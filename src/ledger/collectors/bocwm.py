@@ -83,7 +83,11 @@ class BocwmCollector(Collector):
                 success=False,
                 data_points=[],
                 error_message=f"HTTP {e.response.status_code}: {e}",
-                error_type="server_error" if e.response.status_code >= 500 else "not_found",
+                error_type="rate_limited"
+                if e.response.status_code == 429
+                else "server_error"
+                if e.response.status_code >= 500
+                else "not_found",
             )
         except Exception as e:
             return CollectionResult(
@@ -143,7 +147,7 @@ class BocwmCollector(Collector):
             valuation_date = datetime.strptime(release_date_str, "%Y%m%d").date()
 
             # 单位净值
-            if unit_nav := product_data.get("unitNav"):
+            if (unit_nav := product_data.get("unitNav")) is not None:
                 data_points.append(
                     NavDataPoint(
                         valuation_date=valuation_date,
@@ -155,7 +159,7 @@ class BocwmCollector(Collector):
                 )
 
             # 累计净值
-            if cumulative_nav := product_data.get("cumulativeNav"):
+            if (cumulative_nav := product_data.get("cumulativeNav")) is not None:
                 data_points.append(
                     NavDataPoint(
                         valuation_date=valuation_date,
@@ -167,7 +171,7 @@ class BocwmCollector(Collector):
                 )
 
             # 万份收益
-            if ten_k_profit := product_data.get("tenThousandProfit"):
+            if (ten_k_profit := product_data.get("tenThousandProfit")) is not None:
                 data_points.append(
                     NavDataPoint(
                         valuation_date=valuation_date,
@@ -179,7 +183,7 @@ class BocwmCollector(Collector):
                 )
 
             # 七日年化
-            if seven_day_rate := product_data.get("sevenDayAnnualizedRate"):
+            if (seven_day_rate := product_data.get("sevenDayAnnualizedRate")) is not None:
                 data_points.append(
                     NavDataPoint(
                         valuation_date=valuation_date,

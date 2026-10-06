@@ -3,7 +3,7 @@
 管理银行理财持仓与交易，自动采集产品净值，按日/周/月/自定义区间跟踪收益，
 并能说明每个数字用的是哪天的净值、来自哪个来源、数据是否完整。
 
-当前进度：**S1（项目骨架与数据底座）已完成**。
+当前工作区新增收益与安全 v2 实现；交付范围、迁移步骤及尚未通过的发布门槛见 [v2 实现与验收](docs/security-metrics-v2.md)。建设银行已接入公开目录和历史行情，并通过真实样本契约测试；产品映射须审核，部署验收要求见上述文档。
 阶段规划见 [docs/roadmap.md](docs/roadmap.md)，实际交付记录见 [docs/progress.md](docs/progress.md)。
 
 本版本不开放注册，由管理员用 CLI 建号试用功能。
@@ -226,14 +226,9 @@ uv run python scripts/seed_test_data.py
 
 **API 端点**：
 
-- `GET /api/catalog/sources` - 列出数据源
-- `POST /api/catalog/sources` - 创建数据源（仅管理员）
-- `PATCH /api/catalog/sources/:id` - 更新数据源（仅管理员）
-- `GET /api/catalog/products/:id/sources` - 列出产品的数据源映射
-- `POST /api/catalog/products/:id/sources` - 创建产品与源的映射（仅管理员）
-- `DELETE /api/catalog/products/:id/sources/:source_id` - 删除映射（仅管理员）
-- `GET /api/jobs` - 列出任务（仅管理员）
-- `POST /api/jobs/trigger-nav-sync` - 手动触发净值同步（仅管理员）
+- `GET /api/admin/sources`、`PATCH /api/admin/sources/:id`：管理员查看、启停来源。
+- `/api/source-proposals`：用户草稿、预览和提交；`/api/admin/source-proposals/:id/review`：版本审核。
+- 审核通过后建立公共来源与产品映射；不提供未实现的 `/api/catalog/sources` 管理接口。
 
 **后台进程**：
 

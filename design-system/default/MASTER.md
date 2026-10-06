@@ -19,24 +19,24 @@
 
 | Role | Hex | CSS Variable |
 |------|-----|--------------|
-| Primary | `#F59E0B` | `--color-primary` |
-| On Primary | `#0F172A` | `--color-on-primary` |
-| Secondary | `#FBBF24` | `--color-secondary` |
-| On Secondary | `#0F172A` | `--color-on-secondary` |
-| Accent/CTA | `#8B5CF6` | `--color-accent` |
+| Primary | `#D6BE8C` | `--color-primary` |
+| On Primary | `#151B24` | `--color-on-primary` |
+| Secondary | `#BAC8D8` | `--color-secondary` |
+| On Secondary | `#151B24` | `--color-on-secondary` |
+| Accent/CTA | `#A9B7CC` | `--color-accent` |
 | On Accent/CTA | `#000000` | `--color-on-accent` |
-| Background | `#0F172A` | `--color-background` |
-| Foreground | `#F8FAFC` | `--color-foreground` |
-| Card | `#222735` | `--color-card` |
-| Card Foreground | `#F8FAFC` | `--color-card-foreground` |
-| Muted | `#272F42` | `--color-muted` |
-| Muted Foreground | `#94A3B8` | `--color-muted-foreground` |
-| Border | `#334155` | `--color-border` |
-| Destructive | `#EF4444` | `--color-destructive` |
+| Background | `#151B24` | `--color-background` |
+| Foreground | `#E8ECF2` | `--color-foreground` |
+| Card | `#1D2531` | `--color-card` |
+| Card Foreground | `#E8ECF2` | `--color-card-foreground` |
+| Muted | `#283341` | `--color-muted` |
+| Muted Foreground | `#A7B3C4` | `--color-muted-foreground` |
+| Border | `#465568` | `--color-border` |
+| Destructive | `#F0A4A4` | `--color-destructive` |
 | On Destructive | `#000000` | `--color-on-destructive` |
-| Ring | `#F59E0B` | `--color-ring` |
+| Ring | `#D6BE8C` | `--color-ring` |
 
-**Color Notes:** Gold trust + purple tech
+**Color Notes:** 2026-10-04 用户要求统一治理：深灰蓝背景、柔和白文字、低饱和香槟金操作强调。产品标题使用正文色；图表读取同一语义 token。
 
 ### Typography
 
@@ -82,7 +82,7 @@
 ```css
 /* Primary Button */
 .btn-primary {
-  background: #8B5CF6;
+  background: var(--color-primary);
   color: #000000;
   padding: 12px 24px;
   border-radius: 8px;
@@ -93,14 +93,14 @@
 
 .btn-primary:hover {
   opacity: 0.9;
-  transform: translateY(-1px);
+  /* No position shift on hover. */
 }
 
 /* Secondary Button */
 .btn-secondary {
   background: transparent;
-  color: #F59E0B;
-  border: 2px solid #F59E0B;
+  color: #D6BE8C;
+  border: 2px solid #D6BE8C;
   padding: 12px 24px;
   border-radius: 8px;
   font-weight: 600;
@@ -113,7 +113,7 @@
 
 ```css
 .card {
-  background: #0F172A;
+  background: #151B24;
   border-radius: 12px;
   padding: 24px;
   box-shadow: var(--shadow-md);
@@ -139,9 +139,9 @@
 }
 
 .input:focus {
-  border-color: #F59E0B;
+  border-color: #D6BE8C;
   outline: none;
-  box-shadow: 0 0 0 3px #F59E0B20;
+  box-shadow: 0 0 0 3px #D6BE8C20;
 }
 ```
 
@@ -232,3 +232,20 @@ Before delivering any UI code, verify:
 - [ ] Responsive: 375px, 768px, 1024px, 1440px
 - [ ] No content hidden behind fixed navbars
 - [ ] No horizontal scroll on mobile
+
+## 2026-10-04 UI 治理规则（优先于旧示例）
+
+- 卡片标题链接与正文同色，hover 下划线及暖金反馈；不可出现浏览器默认蓝/紫链接。
+- 按钮主次通过背景和边框区分；输入控件边框 #718096，焦点可见，最小高度 44px。
+- 非交互卡片不漂浮、不位移；正文/次要文字对比度至少 4.5:1。
+- 数值使用等宽数字，指标标题 14px，卡片标题约 20px；手机端指标两列、市值独占首行。
+- 共用 main.css 管理收益网格、过滤栏、链接与按钮；登录和图表使用相同颜色变量。
+- 金融仪表盘 color 搜索结果用于深色层级参考；首次 design-system 检索误匹配 wellness，未采用其营销布局和字体。
+
+### 验收记录（2026-10-05）
+
+- Edge 隔离测试：7 页面 × 375/768/1024/1440 四档宽度，共 28 检查通过，无横向溢出、无脚本错误。
+- 启用减少动态效果，等待 document.fonts.ready 后确认手机端指标及导航图标显示正常。
+- 正文/卡片对比度 13.01:1，次要文字 7.26:1，主按钮文字 9.56:1，输入边框/背景 4.31:1。
+- 产品标题计算颜色 rgb(232,236,242)，与正文一致；手机端使用两列指标。
+- 样式已于上一轮构建进本地 Docker 镜像；本轮 Docker 因 engine.sock 访问失败未能启动，最终复查使用隔离内存库演示数据，未修改真实账本。

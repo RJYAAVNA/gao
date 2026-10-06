@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ledger.auth import create_user
 from ledger.catalog.service import create_institution
 from ledger.db.models.catalog import InstitutionType
-from ledger.db.models.identity import UserRole
+from ledger.db.models.identity import UserRole, UserStatus
 from ledger.portfolio.account_service import (
     AccountNotFoundError,
     DuplicateAccountAliasError,
@@ -25,7 +25,14 @@ from ledger.portfolio.account_service import (
 @pytest.fixture
 def test_user(db_session: Session) -> uuid.UUID:
     """创建测试用户。"""
-    user = create_user(db_session, "testuser", "Pass123", "test@example.com", UserRole.USER)
+    user = create_user(
+        db_session,
+        "testuser",
+        "test@example.com",
+        "Pass123",
+        UserRole.USER,
+        status=UserStatus.ACTIVE,
+    )
     db_session.commit()
     return user.id
 
@@ -86,8 +93,12 @@ def test_get_account_not_found(db_session: Session, test_user: uuid.UUID):
 
 def test_get_account_wrong_user(db_session: Session, test_bank: uuid.UUID):
     """测试跨用户访问账户。"""
-    user1 = create_user(db_session, "user1", "Pass123", "user1@example.com", UserRole.USER)
-    user2 = create_user(db_session, "user2", "Pass123", "user2@example.com", UserRole.USER)
+    user1 = create_user(
+        db_session, "user1", "user1@example.com", "Pass123", UserRole.USER, status=UserStatus.ACTIVE
+    )
+    user2 = create_user(
+        db_session, "user2", "user2@example.com", "Pass123", UserRole.USER, status=UserStatus.ACTIVE
+    )
     db_session.commit()
 
     account = create_account(db_session, user1.id, test_bank, "用户1账户")

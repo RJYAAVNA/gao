@@ -116,6 +116,7 @@ class Transaction(Base, UUIDPrimaryKey, TimestampMixin):
     linked_transaction_id: Mapped[uuid.UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("transactions.id", ondelete="SET NULL")
     )
+    cycle_ref: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True))
     note: Mapped[str | None] = mapped_column(String(512))
 
 

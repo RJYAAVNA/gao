@@ -9,6 +9,7 @@ import enum
 import uuid
 from datetime import datetime
 
+from argon2 import PasswordHasher
 from sqlalchemy import (
     Boolean,
     DateTime,
@@ -77,10 +78,33 @@ class User(Base, UUIDPrimaryKey, TimestampMixin):
     def can_login(self) -> bool:
         return self.status is UserStatus.ACTIVE
 
+    def check_password(self, password: str) -> bool:
+        """验证密码是否正确。"""
+        ph = PasswordHasher()
+        try:
+            ph.verify(self.password_hash, password)
+            return True
+        except Exception:
+            return False
+
 
 class TokenPurpose(str, enum.Enum):
     VERIFY_EMAIL = "verify_email"
     RESET_PASSWORD = "reset_password"
+
+
+class AuthSession(Base, UUIDPrimaryKey):
+    """Revocable browser session; only a hash of the opaque cookie is stored."""
+
+    __tablename__ = "auth_sessions"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class EmailToken(Base, UUIDPrimaryKey, TimestampMixin):

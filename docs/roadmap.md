@@ -3,22 +3,33 @@
 本文件是实施计划的唯一出处。每阶段开工前对照本文件确认范围，
 完工后在 [progress.md](progress.md) 记录实际交付与偏差。
 
+注册、用户产品目录和香港试用部署的后续决策见
+[后续功能计划](next-phase-registration-catalog-deployment.md)。已确定第一版使用邀请码、
+昵称和密码注册；普通用户只能选择管理员已审核发布的产品；
+搜索不到的产品不保存；部署优先在香港服务器试用并实测 Cloudflare 收益。
+
 ## 分支与交付流程
 
 每个阶段一条特性分支，完工后合入 `main`：
 
 ```bash
+git switch main
+git pull --ff-only origin main
 git switch -c feature_s2
 # ... 开发、提交 ...
-git switch main && git merge --no-ff feature_s2
+# 推送 feature_s2，通过 Pull Request 合入 main
 ```
 
 约定：
 
 - 分支命名 `feature_s<n>`，与下表阶段编号对应。
-- 合并用 `--no-ff` 保留阶段边界，便于回溯某个阶段改了什么。
+- 新分支必须从最新 `main` 创建，不从已完成的 feature 分支继续分叉。
+- 通过 Pull Request 合入 `main`，保留阶段边界和可审核记录。
 - 合入 `main` 前四项质量门槛必须全绿：
   `ruff format --check`、`ruff check`、`mypy src/ledger`、`pytest`。
+- feature 分支合并后立即在远端设为锁定/只读：不再提交、强制推送、重写或删除，仅作为阶段快照。
+- 后续修复从最新 `main` 新建分支，不解锁旧 feature 分支；若必须处理仓库级紧急情况，由项目所有者明确授权临时解锁并留下记录。
+- `main` 禁止直接开发和强制推送，以 PR 及通过的 CI 作为合并入口。
 - 每阶段结束后暂停，由我（项目所有者）确认再进入下一阶段。
 
 ## 第一版范围边界

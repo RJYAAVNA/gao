@@ -8,117 +8,108 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, render_template, send_from_directory
+from flask import (
+    Blueprint,
+    current_app,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
+
+from ledger.auth import get_current_user_id
+from ledger.auth.session import clear_current_user
+from ledger.db.models.catalog import Product
+from ledger.db.models.portfolio import Position, Transaction
+from ledger.db.session import get_session
 
 bp = Blueprint("main", __name__)
 
 
 @bp.route("/")
-def index() -> str:
+def index() -> str | Any:
     """首页 - 资产概览。"""
-    # 模拟数据，实际应从数据库获取
-    summary = {
-        "total_market_value": 150000.00,
-        "total_pnl": 8500.00,
-        "total_return": 0.0601,
-        "position_count": 5,
-        "annualized_return": 0.0725,
-        "valuation_date": date.today().strftime("%Y-%m-%d"),
-    }
+    user_id = get_current_user_id()
 
-    top_positions = [
-        {
-            "id": 1,
-            "product_name": "招商银行日日欣",
-            "product_code": "CMB001",
-            "quantity": 50000,
-            "market_value": 51200.00,
-            "cost_basis": 50000.00,
-            "pnl": 1200.00,
-            "return_rate": 0.024,
-        },
-        {
-            "id": 2,
-            "product_name": "工商银行稳利365",
-            "product_code": "ICBC365",
-            "quantity": 40000,
-            "market_value": 41800.00,
-            "cost_basis": 40000.00,
-            "pnl": 1800.00,
-            "return_rate": 0.045,
-        },
-        {
-            "id": 3,
-            "product_name": "建设银行天天盈",
-            "product_code": "CCB888",
-            "quantity": 30000,
-            "market_value": 31500.00,
-            "cost_basis": 30000.00,
-            "pnl": 1500.00,
-            "return_rate": 0.05,
-        },
-    ]
+    # 如果用户未登录，重定向到登录页
+    if user_id is None:
+        return redirect(url_for("main.login"))
 
-    return render_template("pages/index.html", summary=summary, top_positions=top_positions)
+    from ledger.portfolio.read_model import rows, summarize
+
+    with get_session() as db:
+        items = rows(db, user_id, request.args.to_dict())
+        totals = summarize(items)
+    return render_template(
+        "pages/portfolio_v2.html",
+        positions=items[:5],
+        totals=totals,
+        overview=True,
+        **_filter_options(user_id),
+    )
 
 
 @bp.route("/positions")
-def positions() -> str:
+def positions() -> str | Any:
     """持仓列表页。"""
-    positions_data = [
-        {
-            "id": 1,
-            "product_name": "招商银行日日欣",
-            "product_code": "CMB001",
-            "quantity": 50000,
-            "market_value": 51200.00,
-            "cost_basis": 50000.00,
-            "pnl": 1200.00,
-            "return_rate": 0.024,
-        },
-        {
-            "id": 2,
-            "product_name": "工商银行稳利365",
-            "product_code": "ICBC365",
-            "quantity": 40000,
-            "market_value": 41800.00,
-            "cost_basis": 40000.00,
-            "pnl": 1800.00,
-            "return_rate": 0.045,
-        },
-        {
-            "id": 3,
-            "product_name": "建设银行天天盈",
-            "product_code": "CCB888",
-            "quantity": 30000,
-            "market_value": 31500.00,
-            "cost_basis": 30000.00,
-            "pnl": 1500.00,
-            "return_rate": 0.05,
-        },
-        {
-            "id": 4,
-            "product_name": "中国银行稳健增利",
-            "product_code": "BOC520",
-            "quantity": 20000,
-            "market_value": 19500.00,
-            "cost_basis": 20000.00,
-            "pnl": -500.00,
-            "return_rate": -0.025,
-        },
-        {
-            "id": 5,
-            "product_name": "交通银行双利计划",
-            "product_code": "BCM777",
-            "quantity": 10000,
-            "market_value": 10500.00,
-            "cost_basis": 10000.00,
-            "pnl": 500.00,
-            "return_rate": 0.05,
-        },
-    ]
+    user_id = get_current_user_id()
 
-    return render_template("pages/positions.html", positions=positions_data)
+    # 如果用户未登录，重定向到登录页
+    if user_id is None:
+        return redirect(url_for("main.login"))
+
+    from ledger.portfolio.read_model import rows, summarize
+
+    with get_session() as db:
+        items = rows(db, user_id, request.args.to_dict())
+        totals = summarize(items)
+    return render_template(
+        "pages/portfolio_v2.html",
+        positions=items,
+        totals=totals,
+        overview=False,
+        **_filter_options(user_id),
+    )
+
+
+@bp.route("/positions/<uuid:position_id>")
+def position_detail(position_id: str) -> str | Any:
+    """持仓详情页。"""
+    user_id = get_current_user_id()
+
+    # 如果用户未登录，重定向到登录页
+    if user_id is None:
+        return redirect(url_for("main.login"))
+
+    with get_session() as db:
+        # 获取持仓信息
+        position = (
+            db.query(Position)
+            .filter(Position.id == position_id, Position.user_id == user_id)
+            .first()
+        )
+
+        if not position:
+            return jsonify({"error": "not_found"}), 404
+
+        from ledger.portfolio.read_model import rows
+
+        items = rows(db, user_id, {"account_id": str(position.account_id), "status": "all"})
+        item = next(item for item in items if item["id"] == str(position.id))
+        transactions = (
+            db.query(Transaction)
+            .filter(
+                Transaction.user_id == user_id,
+                Transaction.account_id == position.account_id,
+                Transaction.product_id == position.product_id,
+            )
+            .order_by(Transaction.effective_date.desc(), Transaction.created_at.desc())
+            .all()
+        )
+        return render_template("pages/position_v2.html", position=item, transactions=transactions)
 
 
 @bp.route("/analytics")
@@ -166,7 +157,7 @@ def analytics() -> str:
 def settings() -> str:
     """设置页。"""
     # 模拟用户数据
-    user = {"username": "demo_user"}
+    user = g.current_user
 
     return render_template("pages/settings.html", user=user)
 
@@ -213,3 +204,74 @@ def service_worker() -> Any:
 def offline() -> str:
     """离线页面。"""
     return render_template("pages/offline.html")
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login() -> str | Any:
+    """登录页面。"""
+    # 如果已经登录，重定向到首页
+    if get_current_user_id() is not None:
+        return redirect(url_for("main.index"))
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+
+        if not username or not password:
+            return render_template("pages/login.html", error="请输入用户名和密码")
+
+        from ledger.auth.service import AuthenticationError, sign_in
+
+        try:
+            sign_in(username, password)
+        except AuthenticationError:
+            return render_template(
+                "pages/login.html", error="登录失败：请检查凭据、账号状态或稍后重试"
+            ), 401
+
+        # 登录成功，重定向到首页
+        next_url = request.args.get("next")
+        if (
+            next_url
+            and next_url.startswith("/")
+            and not next_url.startswith("//")
+            and "\\" not in next_url
+        ):
+            return redirect(next_url)
+        return redirect(url_for("main.index"))
+
+    return render_template("pages/login.html")
+
+
+@bp.route("/logout", methods=["POST"])
+def logout() -> Any:
+    """登出。"""
+    clear_current_user()
+    return redirect(url_for("main.login"))
+
+
+@bp.route("/sources")
+def source_management() -> str:
+    return render_template("pages/sources.html")
+
+
+def _filter_options(user_id: Any) -> dict[str, Any]:
+    from sqlalchemy import select
+
+    from ledger.db.models.catalog import Institution
+    from ledger.db.models.portfolio import BankAccount
+
+    with get_session() as db:
+        accounts = list(db.scalars(select(BankAccount).where(BankAccount.user_id == user_id)))
+        banks = list(
+            db.scalars(select(Institution).where(Institution.id.in_([a.bank_id for a in accounts])))
+        )
+        currencies = list(
+            db.scalars(
+                select(Product.currency)
+                .join(Position, Position.product_id == Product.id)
+                .where(Position.user_id == user_id)
+                .distinct()
+            )
+        )
+        return {"accounts": accounts, "banks": banks, "currencies": currencies}

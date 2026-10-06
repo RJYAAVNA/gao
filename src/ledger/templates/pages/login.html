@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta name="auth-context" content="{{ g.auth_context|default('') }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ url_for('static', filename='js/identity.js') }}" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0F172A">
+    <title>登录 - 多银行理财台账</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: var(--color-background);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--color-card);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-title {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--color-foreground);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            font-size: 0.9375rem;
+            color: var(--color-muted-foreground);
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--color-muted-foreground);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--color-background);
+            border: 1px solid var(--color-input-border);
+            border-radius: 12px;
+            color: var(--color-foreground);
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: 2px solid var(--color-ring); outline-offset: 2px;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px transparent;
+        }
+
+        .form-input::placeholder {
+            color: var(--color-muted-foreground);
+        }
+
+        .error-message {
+            padding: 0.875rem 1rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            color: var(--color-destructive);
+            font-size: 0.875rem;
+        }
+
+        .login-button {
+            width: 100%;
+            padding: 0.875rem;
+            background: var(--color-primary);
+            border: none;
+            border-radius: 8px;
+            color: var(--color-on-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .login-button:hover {
+            filter: brightness(.94);
+            box-shadow: none;
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .demo-hint {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--color-muted);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            font-size: 0.875rem;
+            color: var(--color-muted-foreground);
+            text-align: center;
+        }
+
+        .demo-hint strong {
+            color: var(--color-primary);
+        }
+        .login-page { padding-bottom: 0; }
+        .login-card { border: 1px solid var(--color-border); border-radius: 12px; box-shadow: none; }
+        @media(max-width:480px) { .login-card { padding: 1.5rem; } }
+    </style>
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1 class="login-title">理财台账</h1>
+                <p class="login-subtitle">欢迎回来，请登录您的账户</p>
+            </div>
+
+            {% if error %}
+            <div class="error-message">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" class="login-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="form-group">
+                    <label for="username" class="form-label">用户名</label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        class="form-input"
+                        placeholder="请输入用户名"
+                        required
+                        autofocus
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">密码</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        class="form-input"
+                        placeholder="请输入密码"
+                        required
+                    >
+                </div>
+
+                <button type="submit" class="login-button">
+                    登录
+                </button>
+            </form>
+
+            <div class="demo-hint">
+                演示账号：<strong>demo</strong> / <strong>password</strong>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
